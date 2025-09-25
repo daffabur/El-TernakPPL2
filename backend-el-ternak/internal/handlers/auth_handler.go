@@ -14,8 +14,9 @@ type AuthRequest struct {
 	Password string `json:"password"`
 }
 
-type AuthResponse struct {
-	Token string `json:"token"`
+type UserContext struct {
+	Username string
+	Role string
 }
 
 func Register(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +56,7 @@ func Login(w http.ResponseWriter, r *http.Request){
 	}
 
 	// generate JWT token
-	token, err := pkg.GenerateJWT(user.Username, user.Role)
+	token, err := pkg.GenerateJWT(int(user.ID), user.Username, user.Role)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, "gagal membuat token")
 		return
@@ -66,8 +67,4 @@ func Login(w http.ResponseWriter, r *http.Request){
 	}
 
 	utils.RespondSuccess(w, http.StatusOK, "Login Berhasil", data)
-}
-
-func Profile(w http.ResponseWriter, r *http.Request){
-	utils.RespondSuccess(w, http.StatusOK, "Berhasil mendapatkan profile anda", nil)
 }

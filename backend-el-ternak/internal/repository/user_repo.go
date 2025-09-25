@@ -3,6 +3,7 @@ package repository
 import (
 	"backend-el-ternak/internal/config"
 	"backend-el-ternak/internal/models"
+	"fmt"
 )
 
 func CreateUser(user *models.User) error {
@@ -18,4 +19,67 @@ func GetUserByUsername(username string) (*models.User, error) {
 	}
 
 	return &user, nil
+}
+
+func GetUserById(id int) (*models.UserSummary, error) {
+	var user models.UserSummary
+	err := config.DB.Model(&models.User{}).
+	Select("id", "username", "role").
+	Where("id = ?", id).
+	First(&user).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func GetAllUser() ([]models.UserSummary, error) {
+	var users []models.UserSummary
+	err := config.DB.Model(&models.User{}).
+	Select("id", "username", "role").
+	Find(&users).Error
+	
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func GetUserByRole(role string) ([]models.UserSummary, error) {
+	var users []models.UserSummary
+	err := config.DB.Model(&models.User{}).Where("role = ?", role).Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func UpdateUser(id uint, newData map[string]interface{}) error {
+	result := config.DB.Model(&models.User{}).Where("id = ?", id).Updates(newData)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("not found")
+	}
+
+	return nil
+}
+
+func DeleteById(id uint) error  {
+	result := config.DB.Where("id = ?", id).Delete(&models.User{})
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("not found")
+	}
+
+	return nil
 }
