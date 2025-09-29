@@ -1,4 +1,5 @@
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/account_management.dart';
 import 'package:flutter/material.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/fa6_solid.dart';
@@ -22,7 +23,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
     Center(child: Text("Money")),
     Center(child: Text("Food")),
     Center(child: Text("Chicken")),
-    Center(child: Text("User")),
+    AccountManagement(),
   ];
 
   void _onItemTapped(int index) {
@@ -39,7 +40,6 @@ class _BottomNavBarState extends State<BottomNavBar> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[200],
       body: appScreen[_selectedIndex],
 
       bottomNavigationBar: Container(
