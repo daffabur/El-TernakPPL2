@@ -28,7 +28,7 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
 
           contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 20),
 
-          border: OutlineInputBorder(
+          enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(25.0),
             borderSide:  BorderSide(
               width: 2.0,
@@ -39,7 +39,7 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(25.0),
             borderSide: BorderSide(
-              width: 2.0,
+              width: 3.0,
               color: AppStyles.primaryColor,
             ),
           ),
