@@ -63,18 +63,18 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   InputDecoration _roundedInput(String label) => InputDecoration(
-    labelText: label,
-    labelStyle: const TextStyle(color: orange),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(30),
-      borderSide: const BorderSide(color: orange),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(30),
-      borderSide: const BorderSide(color: orange, width: 2),
-    ),
-  );
+        labelText: label,
+        labelStyle: const TextStyle(color: orange),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: const BorderSide(color: orange),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: const BorderSide(color: orange, width: 2),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -89,17 +89,14 @@ class _LoginPageState extends State<LoginPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Logo
-                Image.asset(
-                  "assets/images/LogoElTernak.png",
-                  height: 100,
-                ),
+                Image.asset("assets/images/LogoElTernak.png", height: 100),
                 const SizedBox(height: 12),
 
                 // Username
                 TextFormField(
                   controller: _username,
                   validator: (v) =>
-                  (v == null || v.isEmpty) ? "Username wajib diisi" : null,
+                      (v == null || v.isEmpty) ? "Username wajib diisi" : null,
                   textInputAction: TextInputAction.next,
                   decoration: _roundedInput("Username"),
                 ),
@@ -110,7 +107,7 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _password,
                   obscureText: _obscure,
                   validator: (v) =>
-                  (v == null || v.isEmpty) ? "Password wajib diisi" : null,
+                      (v == null || v.isEmpty) ? "Password wajib diisi" : null,
                   onFieldSubmitted: (_) => _doLogin(),
                   decoration: _roundedInput("Password").copyWith(
                     suffixIcon: IconButton(

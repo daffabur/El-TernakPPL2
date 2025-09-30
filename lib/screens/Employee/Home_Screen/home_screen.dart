@@ -4,6 +4,8 @@ import 'package:iconify_flutter/icons/material_symbols.dart';
 import 'package:iconify_flutter/icons/fa6_solid.dart';
 import 'package:iconify_flutter/icons/healthicons.dart';
 import 'package:iconify_flutter/icons/heroicons_solid.dart';
+import 'package:el_ternak_ppl2/login.dart'; // untuk balik ke login
+import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/widgets/Custom_Button.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,13 +17,38 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> appScreens = [
-    const Center(child: Text("Home Pegawai")),
-    const Center(child: Text("Pakan")),
-    const Center(child: Text("Ternak")),
-    const Center(child: Text("Keuangan")),
-    const Center(child: Text("Profil")),
-  ];
+  // method logout
+  void _logout(BuildContext context) {
+    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  }
+
+  late final List<Widget> appScreens;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // isi halaman-halaman
+    appScreens = [
+      const Center(child: Text("Home Pegawai")),
+      const Center(child: Text("Pakan")),
+      const Center(child: Text("Ternak")),
+      const Center(child: Text("Keuangan")),
+      // halaman Profil dengan tombol Logout
+      Center(
+        child: CustomButton(
+          text: "Log Out",
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          borderColor: Colors.red,
+          onTap: () => _logout(context),
+        ),
+      ),
+    ];
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -76,9 +103,9 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(12.0),
         decoration: isSelected
             ? BoxDecoration(
-          borderRadius: BorderRadius.circular(25),
-          color: selectedBackgroundColor.withOpacity(0.1),
-        )
+                borderRadius: BorderRadius.circular(25),
+                color: selectedBackgroundColor.withOpacity(0.1),
+              )
             : const BoxDecoration(),
         child: Iconify(
           iconData,
@@ -89,5 +116,3 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
-
