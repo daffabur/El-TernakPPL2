@@ -38,7 +38,7 @@ class AccountManagement extends StatelessWidget {
           ),
         ],
       ),
-      // 2. Tambahkan FloatingActionButton sebagai properti dari Scaffold
+
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           showModalBottomSheet(context: context, builder: (BuildContext context) {
@@ -47,6 +47,7 @@ class AccountManagement extends StatelessWidget {
         },
         backgroundColor: AppStyles.primaryColor,
         child: Iconify(LineMd.account_add, color: Colors.white),
+
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
