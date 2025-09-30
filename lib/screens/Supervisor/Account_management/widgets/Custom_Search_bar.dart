@@ -17,8 +17,6 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
     return TextField(
         style: const TextStyle(fontSize: 16),
         decoration: InputDecoration(
-
-
           constraints: const BoxConstraints(maxHeight: 48),
           prefixIcon: Icon(
             Icons.search,

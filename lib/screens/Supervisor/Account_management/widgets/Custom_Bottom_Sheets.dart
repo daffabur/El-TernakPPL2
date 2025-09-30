@@ -1,0 +1,201 @@
+import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
+import 'package:flutter/material.dart';
+import 'package:iconify_flutter/iconify_flutter.dart';
+import 'package:iconify_flutter/icons/material_symbols.dart';
+
+class CustomBottomSheets extends StatefulWidget {
+  const CustomBottomSheets({super.key});
+
+  @override
+  State<CustomBottomSheets> createState() => _CustomBottomSheetsState();
+}
+
+class _CustomBottomSheetsState extends State<CustomBottomSheets> {
+  final List<String> _roleItems = ['Pegawai', 'Atasan'];
+  String? _selectedRole;
+
+  // final _usernameController = TextEditingController();
+  // final _passwordController = TextEditingController();
+  // final _kandangController = TextEditingController();
+
+  // @override
+  // void dispose() {
+  //   _usernameController.dispose();
+  //   _passwordController.dispose();
+  //   _kandangController.dispose();
+  //   super.dispose();
+  // }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(20.0),
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                height: 40,
+                width: 40,
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(
+                  child: Iconify(
+                    MaterialSymbols.delete_outline,
+                    color: Colors.red,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 25),
+
+            // Username
+            const Text(
+              "Username",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              // controller: _usernameController,
+              style: const TextStyle(fontSize: 16),
+              decoration: InputDecoration(
+                hintText: "Masukkan username",
+                constraints: const BoxConstraints(maxHeight: 48),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 20),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(width: 1.5, color: AppStyles.primaryColor.withOpacity(0.7)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(width: 2.0, color: AppStyles.primaryColor),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Password
+            const Text(
+              "Password",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              // controller: _passwordController,
+              obscureText: true,
+              style: const TextStyle(fontSize: 16),
+              decoration: InputDecoration(
+                hintText: "Masukkan password",
+                constraints: const BoxConstraints(maxHeight: 48),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 20),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(width: 1.5, color: AppStyles.primaryColor.withOpacity(0.7)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(width: 2.0, color: AppStyles.primaryColor),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Role Dropdown
+            const Text(
+              "Role",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _selectedRole,
+              hint: const Text("Pilih role"),
+              isExpanded: true,
+              decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 20).copyWith(right: 10),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(width: 1.5, color: AppStyles.primaryColor.withOpacity(0.7)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(width: 2.0, color: AppStyles.primaryColor),
+                ),
+              ),
+              items: _roleItems.map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value, style: const TextStyle(fontSize: 16)),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedRole = newValue;
+                });
+              },
+            ),
+            const SizedBox(height: 20),
+
+            // --- Bagian Kandang (Kondisional) ---
+            // Versi yang diperbaiki: Langsung gunakan if di dalam list
+            if (_selectedRole == 'Pegawai')
+              Column( // Bungkus widget kondisional dalam Column atau widget layout lain jika perlu
+                crossAxisAlignment: CrossAxisAlignment.start, // Agar judul Kandang rata kiri
+                children: [
+                  const Text(
+                    "Kandang",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    // controller: _kandangController,
+                    style: const TextStyle(fontSize: 16),
+                    decoration: InputDecoration(
+                      hintText: "Masukkan nama kandang",
+                      constraints: const BoxConstraints(maxHeight: 48),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 20),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                        borderSide: BorderSide(width: 1.5, color: AppStyles.primaryColor.withOpacity(0.7)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                        borderSide: BorderSide(width: 2.0, color: AppStyles.primaryColor),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 5), // Jarak setelah field kandang jika ditampilkan
+                ],
+              ),
+
+            const SizedBox(height: 10),
+
+            Center(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppStyles.primaryColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 12),
+                    textStyle: const TextStyle(fontSize: 16, color: Colors.white),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)
+                    )
+                ),
+                onPressed: () {
+
+                  print("Role: $_selectedRole");
+                  Navigator.pop(context);
+                },
+                child: const Text("Simpan", style: TextStyle(color: Colors.white)),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        )
+      ],
+    );
+  }
+}
