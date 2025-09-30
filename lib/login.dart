@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
 import 'package:el_ternak_ppl2/base/bottom_nav_bar.dart';
 import 'package:el_ternak_ppl2/screens/Employee/Home_Screen/home_screen.dart';
 
@@ -16,14 +20,22 @@ class _LoginPageState extends State<LoginPage> {
   final _username = TextEditingController();
   final _password = TextEditingController();
   bool _obscure = true;
+  bool _isSubmitting = false;
 
-  // Dummy users (sementara, nanti bisa ganti ke API)
-  final Map<String, Map<String, dynamic>> _users = {
-    'atasan': {'password': '123456', 'role': UserRole.atasan},
-    'boss': {'password': 'admin', 'role': UserRole.atasan},
-    'pegawai': {'password': '123456', 'role': UserRole.pegawai},
-    'employee': {'password': 'user', 'role': UserRole.pegawai},
-  };
+  // === Konfigurasi API ===
+  // Android emulator: pakai 10.0.2.2 untuk mengakses localhost mesin host.
+  // iOS Simulator: boleh tetap 'localhost'.
+  String get _baseHost {
+    if (kIsWeb) return 'localhost';
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return '10.0.2.2';
+      default:
+        return 'localhost';
+    }
+  }
+
+  Uri get _loginUri => Uri.parse('http://$_baseHost:11222/api/auth/login');
 
   static const Color orange = Color(0xFFFF7A00);
   static const Color orangeSoft = Color(0xFFFFC766);
@@ -35,14 +47,65 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _doLogin() {
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<void> _doLogin() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
 
-    final uname = _username.text.trim();
-    final pass = _password.text;
+    setState(() => _isSubmitting = true);
 
-    if (_users.containsKey(uname) && _users[uname]!['password'] == pass) {
-      final UserRole role = _users[uname]!['role'] as UserRole;
+    try {
+      final body = jsonEncode({
+        'username': _username.text.trim(),
+        'password': _password.text,
+      });
+
+      final res = await http
+          .post(
+            _loginUri,
+            headers: {'Content-Type': 'application/json'},
+            body: body,
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (res.statusCode != 200) {
+        _showSnack('Server error (${res.statusCode})');
+        setState(() => _isSubmitting = false);
+        return;
+      }
+
+      final Map<String, dynamic> json = jsonDecode(res.body);
+
+      // Expektasi respons (sesuai screenshot Postman):
+      // {
+      //   "success": true,
+      //   "message": "Login Berhasil",
+      //   "data": { "role": "petinggi" | "pegawai", "token": "..." }
+      // }
+      final success = json['success'] == true;
+      if (!success) {
+        _showSnack(json['message']?.toString() ?? 'Login gagal');
+        setState(() => _isSubmitting = false);
+        return;
+      }
+
+      final data = (json['data'] is Map)
+          ? json['data'] as Map<String, dynamic>
+          : {};
+      final roleStr = (data['role'] ?? '').toString().toLowerCase().trim();
+      // Map API -> enum
+      final role = (roleStr == 'petinggi' || roleStr == 'atasan')
+          ? UserRole.atasan
+          : UserRole.pegawai;
+
+      // NOTE: kalau mau simpan token:
+      // final token = data['token']?.toString();
+      // simpan pakai shared_preferences / secure storage sesuai kebutuhan
+
+      if (!mounted) return;
 
       if (role == UserRole.pegawai) {
         Navigator.pushReplacement(
@@ -55,26 +118,26 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(builder: (_) => const BottomNavBar()),
         );
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Username atau password salah')),
-      );
+    } catch (e) {
+      _showSnack('Tidak dapat terhubung ke server: $e');
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
   InputDecoration _roundedInput(String label) => InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: orange),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: orange),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: orange, width: 2),
-        ),
-      );
+    labelText: label,
+    labelStyle: const TextStyle(color: orange),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: const BorderSide(color: orange),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(30),
+      borderSide: const BorderSide(color: orange, width: 2),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -132,12 +195,22 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                       elevation: 4,
+                      disabledBackgroundColor: orangeSoft.withOpacity(0.6),
                     ),
-                    onPressed: _doLogin,
-                    child: const Text(
-                      "Login",
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
+                    onPressed: _isSubmitting ? null : _doLogin,
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            "Login",
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
                   ),
                 ),
               ],
