@@ -12,7 +12,9 @@ class CustomBottomSheets extends StatefulWidget {
 
 class _CustomBottomSheetsState extends State<CustomBottomSheets> {
   final List<String> _roleItems = ['Pegawai', 'Atasan'];
+  final List<String> _statusItems = ['Active', 'Inactive'];
   String? _selectedRole;
+  String? _selectedStatus; // FIX 1: Tambahkan variabel state baru untuk status
 
   // final _usernameController = TextEditingController();
   // final _passwordController = TextEditingController();
@@ -34,26 +36,32 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: Container(
-                height: 40,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Iconify(
-                    MaterialSymbols.delete_outline,
-                    color: Colors.red,
-                    size: 24,
+            GestureDetector(
+              onTap: (){
+                print('Delete button tapped!');
+              },
+              child: Container (
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    height: 40,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Iconify(
+                        MaterialSymbols.delete_outline,
+                        color: Colors.red,
+                        size: 24,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 25),
-
             // Username
             const Text(
               "Username",
@@ -140,11 +148,10 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
             ),
             const SizedBox(height: 20),
 
-            // --- Bagian Kandang (Kondisional) ---
-            // Versi yang diperbaiki: Langsung gunakan if di dalam list
+
             if (_selectedRole == 'Pegawai')
-              Column( // Bungkus widget kondisional dalam Column atau widget layout lain jika perlu
-                crossAxisAlignment: CrossAxisAlignment.start, // Agar judul Kandang rata kiri
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     "Kandang",
@@ -174,6 +181,40 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
 
             const SizedBox(height: 10),
 
+            const Text(
+              "Status",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _selectedStatus, // FIX 2: Gunakan _selectedStatus
+              hint: const Text("Pilih Status"),
+              isExpanded: true,
+              decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 20).copyWith(right: 10),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(width: 1.5, color: AppStyles.primaryColor.withOpacity(0.7)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(width: 2.0, color: AppStyles.primaryColor),
+                ),
+              ),
+              items: _statusItems.map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value, style: const TextStyle(fontSize: 16)),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedStatus = newValue; // FIX 3: Perbarui state _selectedStatus
+                });
+              },
+            ),
+            const SizedBox(height: 20),
+
             Center(
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -187,6 +228,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
                 onPressed: () {
 
                   print("Role: $_selectedRole");
+                  print("Status: $_selectedStatus");
                   Navigator.pop(context);
                 },
                 child: const Text("Simpan", style: TextStyle(color: Colors.white)),

@@ -1,5 +1,6 @@
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/account_management.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Home_Screen/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/fa6_solid.dart';
@@ -19,7 +20,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
   int _selectedIndex = 0;
 
   final appScreen = [
-    Center(child: Text("Home")),
+    Center(child: HomeScreen()),
     Center(child: Text("Money")),
     Center(child: Text("Food")),
     Center(child: Text("Chicken")),
