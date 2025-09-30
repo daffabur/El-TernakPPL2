@@ -39,7 +39,7 @@ func GetUserById(id int) (*models.UserSummary, error) {
 func GetAllUser() ([]models.UserSummary, error) {
 	var users []models.UserSummary
 	err := config.DB.Model(&models.User{}).
-	Select("id", "username", "role").
+	Select("username", "role", "is_active").
 	Find(&users).Error
 	
 	if err != nil {
