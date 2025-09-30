@@ -7,6 +7,7 @@ import (
 )
 
 func CreateUser(user *models.User) error {
+	fmt.Println("dari repo:", user)
 	return config.DB.Create(user).Error
 }
 
@@ -58,8 +59,9 @@ func GetUserByRole(role string) ([]models.UserSummary, error) {
 	return users, nil
 }
 
-func UpdateUser(id uint, newData map[string]interface{}) error {
-	result := config.DB.Model(&models.User{}).Where("id = ?", id).Updates(newData)
+func UpdateUserByUsername(username string, newData map[string]interface{}) error {
+	result := config.DB.Debug().Model(&models.User{}).Where("username = ?", username).Updates(newData)
+
 	if result.Error != nil {
 		return result.Error
 	}
@@ -71,8 +73,8 @@ func UpdateUser(id uint, newData map[string]interface{}) error {
 	return nil
 }
 
-func DeleteById(id uint) error  {
-	result := config.DB.Where("id = ?", id).Delete(&models.User{})
+func DeleteByUsername(username string) error  {
+	result := config.DB.Where("username = ?", username).Delete(&models.User{})
 	if result.Error != nil {
 		return result.Error
 	}

@@ -26,6 +26,11 @@ func ManageRoutes(r *mux.Router)  {
 		middleware.RoleMiddleware("petinggi")(http.HandlerFunc(handlers.GetPetinggiData)),
 	)).Methods("GET")
 
+	// {/create} -> actionable only for petinggi
+	manage.Handle("/create", middleware.JwtMiddleware(
+		middleware.RoleMiddleware("petinggi")(http.HandlerFunc(handlers.CreateUser)),
+	)).Methods("POST")
+
 	// {/edit} -> actionable only for petinggi
 	manage.Handle("/edit", middleware.JwtMiddleware(
 		middleware.RoleMiddleware("petinggi")(http.HandlerFunc(handlers.EditPegawai)),

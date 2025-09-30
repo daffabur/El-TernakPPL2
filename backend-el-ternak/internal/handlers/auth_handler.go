@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"backend-el-ternak/internal/services"
+	"backend-el-ternak/internal/services/user"
 	"backend-el-ternak/pkg"
 	"backend-el-ternak/utils"
 	"encoding/json"
@@ -55,6 +55,11 @@ func Login(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
+	if !user.IsActive {
+		utils.RespondError(w, http.StatusForbidden, "account status is inactive")
+		return
+	}
+
 	// generate JWT token
 	token, err := pkg.GenerateJWT(int(user.ID), user.Username, user.Role)
 	if err != nil {
@@ -64,6 +69,7 @@ func Login(w http.ResponseWriter, r *http.Request){
 
 	data := map[string]string{
 		"token": token,
+		"role": user.Role,
 	}
 
 	utils.RespondSuccess(w, http.StatusOK, "Login Berhasil", data)

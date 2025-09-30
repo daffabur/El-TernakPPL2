@@ -4,7 +4,7 @@ import (
 	"backend-el-ternak/initializers"
 	"backend-el-ternak/internal/config"
 	"backend-el-ternak/internal/routes"
-	"backend-el-ternak/internal/services"
+	"backend-el-ternak/internal/services/user"
 	"log"
 	"net/http"
 

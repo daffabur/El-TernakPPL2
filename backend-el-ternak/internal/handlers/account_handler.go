@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"backend-el-ternak/internal/middleware"
-	"backend-el-ternak/internal/services"
+	"backend-el-ternak/internal/services/user"
 	"backend-el-ternak/utils"
 	"net/http"
 )

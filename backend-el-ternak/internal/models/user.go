@@ -7,6 +7,9 @@ type User struct {
 	Username string `gorm:"unique;not null"`
 	Password string `gorm:"not null"`
 	Role string `gorm:"default:pegawai"`
+	IsActive bool `gorm:"column:is_active"`
+	KandangID *uint `gorm:"default:null"`
+	Kandang *Kandang
 }
 
 type UserSummary struct {
