@@ -1,25 +1,22 @@
-import 'package:el_ternak_ppl2/base/bottom_nav_bar.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:el_ternak_ppl2/login.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const ElTernakApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class ElTernakApp extends StatelessWidget {
+  const ElTernakApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'El Ternak',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        textTheme: GoogleFonts.poppinsTextTheme(
-          Theme.of(context).textTheme,
-        )
-      ),
-      home: BottomNavBar(),
+      theme: ThemeData(useMaterial3: false, primaryColor: const Color(0xFFFF7A00)),
+      home: const LoginPage(),
     );
   }
 }
+
 
