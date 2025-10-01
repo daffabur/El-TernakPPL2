@@ -7,14 +7,13 @@ import 'package:flutter/material.dart';
 class CustomCardEmployee extends StatelessWidget {
   final User user;
 
-
   const CustomCardEmployee({super.key, required this.user});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        showModalBottomSheet(
+        showModalBottomSheet<bool>(
           context: context,
           isScrollControlled: true,
           builder: (context) => Padding(
@@ -25,12 +24,21 @@ class CustomCardEmployee extends StatelessWidget {
               user: user, // <-- Teruskan objek user ke bottom sheet
             ),
           ),
-        ).then((_) {
+        ).then((result) {
+          if (result == true) {
+            // Jika hasilnya true, panggil fungsi untuk memuat ulang data
+            // _refreshUsers();
+
+            // Opsional: Tampilkan pesan di layar utama
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Daftar akun telah diperbarui.'), duration: Duration(seconds: 2)),
+            );
+          }
           // Anda mungkin ingin me-refresh list setelah edit
           // Ini memerlukan callback function dari AccountManagementScreen
         });
       },
-      child: Container(
+      child: Container( 
         height: 60,
         margin: const EdgeInsets.symmetric(vertical: 6.0),
         padding: const EdgeInsets.symmetric(horizontal: 8.0),

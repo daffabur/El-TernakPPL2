@@ -5,7 +5,7 @@ import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/models/user
 class ApiService {
 
   static const String _baseUrl = 'http://10.0.2.2:11222/api/';
-  final String _manualToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTkyNjE5MjksImlkIjoyLCJyb2xlIjoicGV0aW5nZ2kiLCJ1c2VybmFtZSI6IkFkbWluMTIzIn0.X-oY92Wo9XrzrdDqGOIUOjAVeukDOhl99Toll3DcSSE";
+  final String _manualToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTkzMDU1MDYsImlkIjozLCJyb2xlIjoicGV0aW5nZ2kiLCJ1c2VybmFtZSI6ImphbWFsIn0._uzVAXzqHPU3d4tElQKUv21EdAWeOo8N3Tdppr9vTFk";
 
   Map<String, String> _getAuthHeaders() {
     return {
@@ -68,14 +68,12 @@ class ApiService {
       throw Exception('Gagal terhubung ke server saat membuat user: $e');
     }
   }
-  Future<void> updateUser(String username, Map<String, dynamic> userData) async {
+  Future<void> updateUser(String originalUsername, Map<String, dynamic> updateData) async {
     try {
-      // Endpoint untuk update biasanya menyertakan identifier, seperti username
-      // Sesuaikan URL jika backend Anda mengharapkan ID, bukan username
       final response = await http.put( // Umumnya menggunakan PUT atau PATCH untuk update
-        Uri.parse('${_baseUrl}manage/edit/$username'), // URL sesuai yang Anda berikan
+        Uri.parse('${_baseUrl}manage/edit'), // URL sesuai yang Anda berikan
         headers: _getAuthHeaders(),
-        body: jsonEncode(userData),
+        body: jsonEncode(updateData),
       );
 
       if (response.statusCode != 200) {
@@ -92,11 +90,40 @@ class ApiService {
         throw Exception(errorMessage);
       }
 
-      print('User berhasil diperbarui: ${response.body}');
-
+      print('User "$originalUsername" berhasil diperbarui: ${response.body}');
     } catch (e) {
       throw Exception('Gagal terhubung ke server saat memperbarui user: $e');
     }
   }
+
+  Future<void> deleteUser(String username) async {
+    // 1. Endpoint yang benar (tanpa /username di path)
+    final url = Uri.parse('${_baseUrl}manage/delete');
+
+    // 2. Body JSON yang berisi username
+    final body = jsonEncode(<String, String>{
+      'username': username,
+    });
+
+    print('DELETE Request to: $url');
+    print('With body: $body');
+
+    // 3. Gunakan http.delete dengan body
+    //    Paket http standar tidak memiliki http.delete dengan body.
+    //    Kita harus membuat request secara manual.
+    final request = http.Request('DELETE', url);
+    request.headers.addAll(_getAuthHeaders()); // Gunakan header otorisasi Anda
+    request.body = body;
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode != 200) {
+      throw Exception('Gagal menghapus. Status: ${response.statusCode}, Body: ${response.body}');
+    }
+
+    print('User "$username" berhasil dihapus.');
+  }
+
 // Anda bisa menambahkan fungsi lain di sini (addUser, updateUser, deleteUser)
 }

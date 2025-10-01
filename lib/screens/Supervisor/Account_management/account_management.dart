@@ -26,6 +26,7 @@ class _AccountManagementState extends State<AccountManagement> {
     super.initState();
     // Panggil fungsi untuk mengambil data saat widget pertama kali dibuat
     _usersFuture = apiService.getAllUsers();
+    _refreshUsers();
   }
 
   // Fungsi untuk refresh data
