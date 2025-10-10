@@ -185,7 +185,6 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
                       child: Align(
                         alignment: Alignment.centerRight,
                         child: Container(
-                          // --- PERBAIKAN UKURAN TOMBOL ---
                           height: 60,
                           width: 60,
                           decoration: BoxDecoration(
@@ -204,9 +203,6 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
                     )
                   else
                     const SizedBox(height: 40),
-
-                  // Sisa kode UI Anda di bawah ini sudah benar.
-                  // ...
                   const SizedBox(height: 25),
                   const Text("Username", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 8),

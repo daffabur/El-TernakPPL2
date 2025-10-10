@@ -1,24 +1,62 @@
+import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert'; // Diperlukan untuk jsonDecode
+import 'dart:convert';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/models/user_model.dart';
 
 class ApiService {
-
   static const String _baseUrl = 'http://10.0.2.2:11222/api/';
-  final String _manualToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTkzMDU1MDYsImlkIjozLCJyb2xlIjoicGV0aW5nZ2kiLCJ1c2VybmFtZSI6ImphbWFsIn0._uzVAXzqHPU3d4tElQKUv21EdAWeOo8N3Tdppr9vTFk";
+  final AuthService _authService = AuthService();
 
-  Map<String, String> _getAuthHeaders() {
+  // Helper untuk mendapatkan header otentikasi
+  Future<Map<String, String>> _getAuthHeaders() async {
+    final token = await _authService.getToken();
+    if (token == null) {
+      throw Exception('Token not found. Please log in again.');
+    }
     return {
       'Content-Type': 'application/json; charset=UTF-8',
-      'Authorization': 'Bearer $_manualToken',
+      'Authorization': 'Bearer $token'
     };
   }
+
+  // Fungsi untuk Login
+  Future<String> login(String username, String password) async {
+    final response = await http.post(
+      Uri.parse('${_baseUrl}auth/login'),
+      headers: {'Content-Type': 'application/json; charset=UTF-8'},
+      body: jsonEncode({
+        'username': username,
+        'password': password,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final responseBody = jsonDecode(response.body);
+      final String? token = responseBody['data']['token'];
+      if (token != null && token.isNotEmpty) {
+        print('Login successful, token received.');
+        return token;
+      } else {
+        throw Exception('Respons login tidak valid: token tidak ditemukan.');
+      }
+    } else {
+      try {
+        final responseBody = jsonDecode(response.body);
+        final errorMessage = responseBody['message'] ?? 'Username atau password salah.';
+        throw Exception(errorMessage);
+      } catch (_) {
+        throw Exception('Gagal login. Status: ${response.statusCode}');
+      }
+    }
+  }
+
+  // Fungsi untuk mendapatkan semua user
   Future<List<User>> getAllUsers() async {
     try {
-
+      final headers = await _getAuthHeaders();
       final response = await http.get(
         Uri.parse('${_baseUrl}manage/'),
-        headers: _getAuthHeaders() ,
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -26,104 +64,98 @@ class ApiService {
         if (apiResponse.success) {
           return apiResponse.data;
         } else {
-          throw Exception('Failed to load users: ${apiResponse.message}');
+          throw Exception(apiResponse.message ?? 'Failed to load users');
         }
+      } else if (response.statusCode == 401) {
+        throw Exception('Sesi anda habis, tolong login kembali');
       } else {
-        throw Exception('Failed to load users. Status Code: ${response.statusCode}');
+        throw Exception('Gagal memuat data. Status: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Failed to connect to the server: $e');
+      // Lempar kembali error yang sudah diformat atau error koneksi
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
+
+  // Fungsi untuk membuat user baru
   Future<void> createUser(Map<String, dynamic> userData) async {
     try {
+      final headers = await _getAuthHeaders();
       final response = await http.post(
         Uri.parse('${_baseUrl}manage/create'),
-        headers: _getAuthHeaders(), // Gunakan header otorisasi yang sama
-        body: jsonEncode(userData),   // Kirim data user sebagai body request
+        headers: headers,
+        body: jsonEncode(userData),
       );
 
-      // Cek jika request tidak berhasil (bukan 201 Created atau 200 OK)
       if (response.statusCode != 201 && response.statusCode != 200) {
-        // Coba decode body response untuk mendapatkan pesan error dari server
-        String errorMessage = 'Gagal membuat user. Status code: ${response.statusCode}';
         try {
           final responseBody = jsonDecode(response.body);
-          if (responseBody.containsKey('message')) {
-            errorMessage = 'Error: ${responseBody['message']}';
-          }
+          final errorMessage = responseBody['message'] ?? 'Gagal membuat user.';
+          throw Exception(errorMessage);
         } catch (_) {
-          // Jika body bukan JSON, gunakan pesan default
-          errorMessage += ' | Response: ${response.body}';
+          throw Exception('Gagal membuat user. Status: ${response.statusCode}');
         }
-        throw Exception(errorMessage);
       }
-
-      // Jika berhasil, tidak perlu mengembalikan apa-apa (void)
-      // Kita bisa print untuk debugging
       print('User berhasil dibuat: ${response.body}');
-
     } catch (e) {
-      // Lempar kembali error agar bisa ditangkap di UI
-      throw Exception('Gagal terhubung ke server saat membuat user: $e');
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
+
+  // Fungsi untuk memperbarui user
   Future<void> updateUser(String originalUsername, Map<String, dynamic> updateData) async {
     try {
-      final response = await http.put( // Umumnya menggunakan PUT atau PATCH untuk update
-        Uri.parse('${_baseUrl}manage/edit'), // URL sesuai yang Anda berikan
-        headers: _getAuthHeaders(),
+      final headers = await _getAuthHeaders();
+      final response = await http.put(
+        Uri.parse('${_baseUrl}manage/edit'),
+        headers: headers,
         body: jsonEncode(updateData),
       );
 
       if (response.statusCode != 200) {
-        // Handle error response
-        String errorMessage = 'Gagal memperbarui user. Status code: ${response.statusCode}';
         try {
           final responseBody = jsonDecode(response.body);
-          if (responseBody.containsKey('message')) {
-            errorMessage = 'Error: ${responseBody['message']}';
-          }
+          final errorMessage = responseBody['message'] ?? 'Gagal memperbarui user.';
+          throw Exception(errorMessage);
         } catch (_) {
-          errorMessage += ' | Response: ${response.body}';
+          throw Exception('Gagal memperbarui user. Status: ${response.statusCode}');
         }
-        throw Exception(errorMessage);
       }
-
       print('User "$originalUsername" berhasil diperbarui: ${response.body}');
     } catch (e) {
-      throw Exception('Gagal terhubung ke server saat memperbarui user: $e');
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
 
+  // Fungsi untuk menghapus user
   Future<void> deleteUser(String username) async {
-    // 1. Endpoint yang benar (tanpa /username di path)
-    final url = Uri.parse('${_baseUrl}manage/delete');
+    try {
+      final url = Uri.parse('${_baseUrl}manage/delete');
+      final body = jsonEncode({'username': username});
 
-    // 2. Body JSON yang berisi username
-    final body = jsonEncode(<String, String>{
-      'username': username,
-    });
+      print('DELETE Request to: $url');
+      print('With body: $body');
 
-    print('DELETE Request to: $url');
-    print('With body: $body');
+      final request = http.Request('DELETE', url);
+      // 'await' diperlukan di sini karena _getAuthHeaders() adalah Future
+      request.headers.addAll(await _getAuthHeaders());
+      request.body = body;
 
-    // 3. Gunakan http.delete dengan body
-    //    Paket http standar tidak memiliki http.delete dengan body.
-    //    Kita harus membuat request secara manual.
-    final request = http.Request('DELETE', url);
-    request.headers.addAll(_getAuthHeaders()); // Gunakan header otorisasi Anda
-    request.body = body;
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode != 200) {
-      throw Exception('Gagal menghapus. Status: ${response.statusCode}, Body: ${response.body}');
+      if (response.statusCode != 200) {
+        try {
+          final responseBody = jsonDecode(response.body);
+          final errorMessage = responseBody['message'] ?? 'Gagal menghapus user.';
+          throw Exception(errorMessage);
+        } catch (_) {
+          throw Exception('Gagal menghapus. Status: ${response.statusCode}');
+        }
+      }
+      print('User "$username" berhasil dihapus.');
+    } catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
-
-    print('User "$username" berhasil dihapus.');
   }
-
-// Anda bisa menambahkan fungsi lain di sini (addUser, updateUser, deleteUser)
 }
