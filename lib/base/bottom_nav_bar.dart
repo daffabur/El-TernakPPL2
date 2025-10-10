@@ -33,7 +33,6 @@ class _BottomNavBarState extends State<BottomNavBar> {
     });
   }
 
-
   final Color selectedColor = AppStyles.highlightColor;
   final Color unselectedColor = AppStyles.highlightColor;
   final Color selectedBackgroundColor = const Color(0xFF3E7B27);
@@ -82,9 +81,9 @@ class _BottomNavBarState extends State<BottomNavBar> {
         padding: const EdgeInsets.all(12.0),
         decoration: isSelected
             ? BoxDecoration(
-          borderRadius: BorderRadius.circular(25),
-          color: selectedBackgroundColor.withOpacity(0.1),
-        )
+                borderRadius: BorderRadius.circular(25),
+                color: selectedBackgroundColor.withOpacity(0.1),
+              )
             : const BoxDecoration(),
         child: Iconify(
           iconData,

@@ -1,47 +1,42 @@
-import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:flutter/material.dart';
 
-class CustomButton extends StatefulWidget {
+class CustomButton extends StatelessWidget {
   final String text;
-  final Color? backgroundColor;
-  final Color? textColor;
-  final Color? borderColor;
+  final Color? backgroundColor; // null => transparan (outline only)
+  final Color? textColor; // default: putih
+  final Color? borderColor; // default: putih
+  final VoidCallback? onTap; // <- penting: aksi saat ditekan
 
-  const CustomButton({super.key,
+  const CustomButton({
+    super.key,
     required this.text,
-    required this.backgroundColor,
-    required this.textColor,
-    required this.borderColor,
+    this.backgroundColor,
+    this.textColor,
+    this.borderColor,
+    this.onTap,
   });
 
   @override
-  State<CustomButton> createState() => _CustomButtonState();
-}
-
-class _CustomButtonState extends State<CustomButton> {
-  @override
   Widget build(BuildContext context) {
-    final bgColor = widget.backgroundColor ?? Colors.transparent;
-    final textColor = widget.textColor ?? Colors.white;
-    final borderColor = widget.borderColor ?? Colors.white;
+    final Color bgColor = backgroundColor ?? Colors.transparent;
+    final Color txtColor = textColor ?? Colors.white;
+    final Color brdColor = borderColor ?? Colors.white;
+
     return GestureDetector(
-      onTap: (){
-        print('${widget.text} button tapped!');
-      },
+      onTap: onTap, // <-- panggil callback dari luar (bukan print doang)
       child: Container(
         height: 48,
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
+          color: bgColor, // kalau transparan => jadi outline saja
           borderRadius: BorderRadius.circular(25.0),
-              border:BoxBorder.all(
-                color: borderColor,
-                width: 2.0
-              ) ,
+          border: Border.all(color: brdColor, width: 2.0),
         ),
-        child:
-        Text(widget.text,
+        child: Text(
+          text,
           style: TextStyle(
-            color: textColor,
+            color: txtColor,
             fontWeight: FontWeight.w500,
             fontSize: 16,
           ),
