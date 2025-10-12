@@ -1,6 +1,7 @@
 package config
 
 import (
+	"backend-el-ternak/internal/models"
 	"fmt"
 	"log"
 	"os"
@@ -28,4 +29,16 @@ func ConnectDB() {
 	}
 
 	fmt.Println("Berhasil terhubung ke database")
+
+	err = DB.AutoMigrate(
+		&models.Transaksi{},
+		&models.User{},
+		&models.Kandang{},
+	)
+
+	if err != nil {
+		log.Fatal("Gagal migrasi database", err)
+	}
+
+	fmt.Println("Berhasil migrasi database")
 }

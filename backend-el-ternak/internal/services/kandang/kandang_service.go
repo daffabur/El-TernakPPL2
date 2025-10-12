@@ -6,7 +6,7 @@ import (
 	"backend-el-ternak/internal/repository"
 )
 
-func CreateKandang(nama string, jumlahAyam int, idPenanggungJawab []uint) error {
+func CreateKandang(nama string, kapasitas int, idPenanggungJawab []uint) error {
 	var penanggungJawab []models.User
 
 	if err := config.DB.Find(&penanggungJawab, idPenanggungJawab).Error; err != nil {
@@ -15,7 +15,7 @@ func CreateKandang(nama string, jumlahAyam int, idPenanggungJawab []uint) error 
 
 	newKandang := models.Kandang{
 		Nama: nama,
-		JumlahAyam: jumlahAyam,
+		Kapasitas: kapasitas,
 		PenanggungJawab: penanggungJawab,
 	}
 
