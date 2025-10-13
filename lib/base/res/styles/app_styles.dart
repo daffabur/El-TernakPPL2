@@ -10,6 +10,7 @@ class AppStyles{
   static Color highlightColor = hgColor;
   static Color primaryColor = primary;
   static Color borderCageColor = borderCardColor;
+  static Color borderTransactionColor= borderCardColor;
   static Color IconCageCardColor = IconbgColor;
 
 }

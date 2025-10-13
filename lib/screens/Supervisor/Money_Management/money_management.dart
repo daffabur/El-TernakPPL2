@@ -86,10 +86,13 @@ class _MoneyManagementState extends State<MoneyManagement> {
                       ),
                     ],
                   ),
-                  const Iconify(
-                    MaterialSymbols.attach_money,
-                    color: Color(0xFF1C4E3E),
-                    size: 60,
+                  ClipRRect(
+                    child: Image.asset(
+                      'assets/images/ic_totalSaldo.png',
+                      width: MediaQuery.of(context).size.width * 0.3,
+                      fit: BoxFit.fitHeight,
+                      height: MediaQuery.of(context).size.width * 0.3
+                    ),
                   ),
                 ],
               ),
@@ -110,6 +113,7 @@ class _MoneyManagementState extends State<MoneyManagement> {
                           "Hari ini",
                           "Minggu ini",
                           "Bulanan ini",
+                          "Tahun",
                         ])
                           Padding(
                             padding: const EdgeInsets.only(right: 8),
@@ -139,7 +143,7 @@ class _MoneyManagementState extends State<MoneyManagement> {
                     children: [
                       Expanded(
                         child: SummaryCard(
-                          icon: MaterialSymbols.trending_up,
+                          image: "assets/images/ic_income.svg",
                           color: Colors.green,
                           title: "Pemasukan",
                           amount: "Rp 25.000.000",
@@ -148,7 +152,7 @@ class _MoneyManagementState extends State<MoneyManagement> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: SummaryCard(
-                          icon: MaterialSymbols.trending_down,
+                          image: "assets/images/ic_outcome.svg",
                           color: Colors.red,
                           title: "Pengeluaran",
                           amount: "Rp 105.000.000",

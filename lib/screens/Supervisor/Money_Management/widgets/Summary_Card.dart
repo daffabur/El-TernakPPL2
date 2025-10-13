@@ -1,19 +1,20 @@
 
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 
 class SummaryCard extends StatelessWidget {
   final String title, amount;
-  final String icon;
+  final String image;
   final Color color;
 
   const SummaryCard({
     super.key,
     required this.title,
     required this.amount,
-    required this.icon,
+    required this.image,
     required this.color,
   });
 
@@ -35,8 +36,15 @@ class SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-            Iconify(icon, color: color, size: 60),
-         SizedBox(height: 15,),
+          ClipRRect(
+            child: SvgPicture.asset(
+                image,
+                width: MediaQuery.of(context).size.width * 0.1,
+                fit: BoxFit.fitHeight,
+                height: MediaQuery.of(context).size.width * 0.1
+            ),
+          ),
+         SizedBox(height: 20,),
          Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
