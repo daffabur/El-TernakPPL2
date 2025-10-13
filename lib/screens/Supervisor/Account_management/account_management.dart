@@ -1,7 +1,6 @@
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/models/user_model.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/widgets/Custom_Bottom_Sheets.dart';
-import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/widgets/Custom_Button.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/widgets/Custom_Card_Employee.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/widgets/Custom_Search_bar.dart';
 import 'package:el_ternak_ppl2/services/api_service.dart';
@@ -18,56 +17,71 @@ class AccountManagement extends StatefulWidget {
 
 class _AccountManagementState extends State<AccountManagement> {
   final ApiService apiService = ApiService();
-  // Future untuk menyimpan hasil fetch data
   late Future<List<User>> _usersFuture;
 
   @override
   void initState() {
     super.initState();
-    // Panggil fungsi untuk mengambil data saat widget pertama kali dibuat
-    _usersFuture = apiService.getAllUsers();
     _refreshUsers();
   }
-
-  // Fungsi untuk refresh data
   void _refreshUsers() {
     setState(() {
       _usersFuture = apiService.getAllUsers();
     });
   }
 
+  void _showAddSheet() {
+    showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: false,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: const CustomBottomSheets(mode: BottomSheetMode.add),
+      ),
+    ).then((result) {
+      // Hanya refresh jika bottom sheet mengembalikan nilai `true`
+      if (result == true) {
+        _refreshUsers();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Daftar akun telah diperbarui.')),
+        );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-
+    // floatingActionButton diletakkan sebagai properti dari Scaffold
     return Scaffold(
       appBar: AppBar(
-        actions: [
-          Expanded(
-              child: CustomSearchBar()
-          )
-        ],
-        actionsPadding: EdgeInsets.symmetric(horizontal: 20.0),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const CustomSearchBar(),
       ),
       body: FutureBuilder<List<User>>(
         future: _usersFuture,
         builder: (context, snapshot) {
-
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
-
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text('Gagal memuat data: ${snapshot.error}'),
+              ),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('Tidak ada data user.'));
+            return const Center(child: Text('Tidak ada data user.'));
           }
 
+          // Jika data berhasil didapat
           final users = snapshot.data!;
           return ListView.builder(
-            padding: EdgeInsets.symmetric(horizontal: 20.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
             itemCount: users.length,
             itemBuilder: (context, index) {
               final user = users[index];
@@ -78,28 +92,13 @@ class _AccountManagementState extends State<AccountManagement> {
           );
         },
       ),
-
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            builder: (context) => Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-              child: CustomBottomSheets(mode: BottomSheetMode.add),
-            ),
-          ).then((_) {
-            // Setelah bottom sheet ditutup (misalnya setelah menyimpan user baru),
-            // panggil _refreshUsers untuk memuat ulang daftar user.
-            _refreshUsers();
-          });
-        },
+        onPressed: _showAddSheet,
         backgroundColor: AppStyles.primaryColor,
-        child: Iconify(LineMd.account_add, color: Colors.white),
-
+        child: const Iconify(LineMd.account_add, color: Colors.white),
       ),
+      // Posisi FloatingActionButton
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-
     );
   }
 }

@@ -1,12 +1,13 @@
 import 'dart:convert';
+import 'package:el_ternak_ppl2/services/api_service.dart';   // <-- TAMBAHKAN
+import 'package:el_ternak_ppl2/services/auth_service.dart'; // <-- TAMBAHKAN
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 import 'package:el_ternak_ppl2/base/bottom_nav_bar.dart';
 import 'package:el_ternak_ppl2/screens/Employee/Home_Screen/home_screen.dart';
 
-enum UserRole { atasan, pegawai }
+enum UserRole { atasan, pegawai, unknown }
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,26 +17,16 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+
   final _formKey = GlobalKey<FormState>();
   final _username = TextEditingController();
   final _password = TextEditingController();
   bool _obscure = true;
   bool _isSubmitting = false;
 
-  // === Konfigurasi API ===
-  // Android emulator: pakai 10.0.2.2 untuk mengakses localhost mesin host.
-  // iOS Simulator: boleh tetap 'localhost'.
-  String get _baseHost {
-    if (kIsWeb) return 'localhost';
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return '10.0.2.2';
-      default:
-        return 'localhost';
-    }
-  }
-
-  Uri get _loginUri => Uri.parse('http://$_baseHost:11222/api/auth/login');
+  // === Buat Instance dari Service Anda ===
+  final ApiService _apiService = ApiService();
+  final AuthService _authService = AuthService();
 
   static const Color orange = Color(0xFFFF7A00);
   static const Color orangeSoft = Color(0xFFFFC766);
@@ -48,9 +39,11 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _showSnack(String msg) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  // === FUNGSI LOGIN YANG DIPERBARUI ===
   Future<void> _doLogin() async {
     if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
@@ -58,68 +51,53 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isSubmitting = true);
 
     try {
-      final body = jsonEncode({
-        'username': _username.text.trim(),
-        'password': _password.text,
-      });
+      // 1. Panggil fungsi login dari ApiService
+      // Fungsi ini sudah menangani request dan parsing JSON dasar
+      final token = await _apiService.login(
+        _username.text.trim(),
+        _password.text,
+      );
 
-      final res = await http
-          .post(
-            _loginUri,
-            headers: {'Content-Type': 'application/json'},
-            body: body,
-          )
-          .timeout(const Duration(seconds: 15));
+      // 2. Simpan token menggunakan AuthService (SANGAT PENTING!)
+      await _authService.saveToken(token);
 
-      if (res.statusCode != 200) {
-        _showSnack('Server error (${res.statusCode})');
-        setState(() => _isSubmitting = false);
-        return;
+      // 3. Decode token untuk mendapatkan role (jika role ada di dalam token)
+      //    Ini adalah cara standar untuk mendapatkan info dari JWT tanpa perlu library tambahan.
+      final parts = token.split('.');
+      if (parts.length != 3) {
+        throw Exception('Invalid token format');
       }
+      final payload = json.decode(
+          utf8.decode(base64Url.decode(base64Url.normalize(parts[1])))
+      );
 
-      final Map<String, dynamic> json = jsonDecode(res.body);
-
-      // Expektasi respons (sesuai screenshot Postman):
-      // {
-      //   "success": true,
-      //   "message": "Login Berhasil",
-      //   "data": { "role": "petinggi" | "pegawai", "token": "..." }
-      // }
-      final success = json['success'] == true;
-      if (!success) {
-        _showSnack(json['message']?.toString() ?? 'Login gagal');
-        setState(() => _isSubmitting = false);
-        return;
-      }
-
-      final data = (json['data'] is Map)
-          ? json['data'] as Map<String, dynamic>
-          : {};
-      final roleStr = (data['role'] ?? '').toString().toLowerCase().trim();
-      // Map API -> enum
+      final roleStr = (payload['role'] ?? '').toString().toLowerCase().trim();
       final role = (roleStr == 'petinggi' || roleStr == 'atasan')
           ? UserRole.atasan
-          : UserRole.pegawai;
+          : (roleStr == 'pegawai')
+          ? UserRole.pegawai
+          : UserRole.unknown;
 
-      // NOTE: kalau mau simpan token:
-      // final token = data['token']?.toString();
-      // simpan pakai shared_preferences / secure storage sesuai kebutuhan
+      if (role == UserRole.unknown) {
+        throw Exception('User role not found in token.');
+      }
 
       if (!mounted) return;
 
+      // 4. Navigasi berdasarkan role
       if (role == UserRole.pegawai) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
-      } else {
+      } else { // UserRole.atasan
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const BottomNavBar()),
         );
       }
     } catch (e) {
-      _showSnack('Tidak dapat terhubung ke server: $e');
+      _showSnack(e.toString().replaceAll("Exception: ", ""));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -136,6 +114,14 @@ class _LoginPageState extends State<LoginPage> {
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(30),
       borderSide: const BorderSide(color: orange, width: 2),
+    ),
+    errorBorder: OutlineInputBorder( // Tambahkan ini untuk konsistensi
+      borderRadius: BorderRadius.circular(30),
+      borderSide: const BorderSide(color: Colors.red, width: 1),
+    ),
+    focusedErrorBorder: OutlineInputBorder( // Tambahkan ini untuk konsistensi
+      borderRadius: BorderRadius.circular(30),
+      borderSide: const BorderSide(color: Colors.red, width: 2),
     ),
   );
 
@@ -159,7 +145,7 @@ class _LoginPageState extends State<LoginPage> {
                 TextFormField(
                   controller: _username,
                   validator: (v) =>
-                      (v == null || v.isEmpty) ? "Username wajib diisi" : null,
+                  (v == null || v.isEmpty) ? "Username wajib diisi" : null,
                   textInputAction: TextInputAction.next,
                   decoration: _roundedInput("Username"),
                 ),
@@ -170,7 +156,7 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _password,
                   obscureText: _obscure,
                   validator: (v) =>
-                      (v == null || v.isEmpty) ? "Password wajib diisi" : null,
+                  (v == null || v.isEmpty) ? "Password wajib diisi" : null,
                   onFieldSubmitted: (_) => _doLogin(),
                   decoration: _roundedInput("Password").copyWith(
                     suffixIcon: IconButton(
@@ -200,17 +186,17 @@ class _LoginPageState extends State<LoginPage> {
                     onPressed: _isSubmitting ? null : _doLogin,
                     child: _isSubmitting
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                         : const Text(
-                            "Login",
-                            style: TextStyle(color: Colors.white, fontSize: 16),
-                          ),
+                      "Login",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
                   ),
                 ),
               ],

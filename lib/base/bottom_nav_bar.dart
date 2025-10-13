@@ -1,13 +1,15 @@
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/account_management.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/cage_management.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Home_Screen/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
-import 'package:iconify_flutter/icons/fa6_solid.dart';
 import 'package:iconify_flutter/icons/fluent_mdl2.dart';
 import 'package:iconify_flutter/icons/healthicons.dart';
 import 'package:iconify_flutter/icons/heroicons_solid.dart';
 import 'package:iconify_flutter/icons/material_symbols.dart';
+
+import '../screens/Supervisor/Money_Management/money_management.dart';
 
 class BottomNavBar extends StatefulWidget {
   const BottomNavBar({super.key});
@@ -21,8 +23,8 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
   final appScreen = [
     Center(child: HomeScreen()),
-    Center(child: Text("Money")),
-    Center(child: Text("Food")),
+    MoneyManagement(),
+    CageManagement(),
     Center(child: Text("Chicken")),
     AccountManagement(),
   ];
@@ -62,8 +64,8 @@ class _BottomNavBarState extends State<BottomNavBar> {
           children: [
             _buildNavItem(MaterialSymbols.home, "Home", 0),
             _buildNavItem(FluentMdl2.money, "Money", 1),
-            _buildNavItem(Fa6Solid.plate_wheat, "Food", 2),
-            _buildNavItem(Healthicons.animal_chicken, "Chicken", 3),
+            _buildNavItem(Healthicons.animal_chicken, "Food", 2),
+            _buildNavItem(MaterialSymbols.warehouse_rounded, "Chicken", 3),
             _buildNavItem(HeroiconsSolid.user_group, "User", 4),
           ],
         ),

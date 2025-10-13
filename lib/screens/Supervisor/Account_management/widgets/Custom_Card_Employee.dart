@@ -15,10 +15,9 @@ class CustomCardEmployee extends StatelessWidget {
       onTap: () {
         showModalBottomSheet<bool>(
           context: context,
-          isScrollControlled: true,
+          isScrollControlled: false,
           builder: (context) => Padding(
             padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-            // Panggil dengan mode edit dan berikan data user
             child: CustomBottomSheets(
               mode: BottomSheetMode.edit,
               user: user, // <-- Teruskan objek user ke bottom sheet
@@ -26,16 +25,11 @@ class CustomCardEmployee extends StatelessWidget {
           ),
         ).then((result) {
           if (result == true) {
-            // Jika hasilnya true, panggil fungsi untuk memuat ulang data
-            // _refreshUsers();
-
-            // Opsional: Tampilkan pesan di layar utama
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Daftar akun telah diperbarui.'), duration: Duration(seconds: 2)),
             );
           }
-          // Anda mungkin ingin me-refresh list setelah edit
-          // Ini memerlukan callback function dari AccountManagementScreen
+
         });
       },
       child: Container( 
