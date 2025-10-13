@@ -1,3 +1,4 @@
+import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/models/transaction_model.dart';
 import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -156,6 +157,35 @@ class ApiService {
       print('User "$username" berhasil dihapus.');
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
+  Future<List<TransactionModel>> getAllTransactions() async {
+    try {
+      final headers = await _getAuthHeaders();
+      final response = await http.get(
+        Uri.parse('${_baseUrl}transaksi/'),
+        headers: headers, // Gunakan helper header yang sama
+      );
+
+      if (response.statusCode == 200) {
+        // 1. Decode JSON response utama
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+        // 2. Akses list 'data' di dalam JSON
+        final List<dynamic> dataList = jsonResponse['data'];
+
+        // 3. Ubah setiap item di dalam list menjadi objek TransactionModel
+        // dan kembalikan sebagai List<TransactionModel>
+        return dataList.map((json) => TransactionModel.fromJson(json)).toList();
+
+      } else if (response.statusCode == 401) {
+        throw Exception('Error 401: Unauthorized. Token tidak valid atau kedaluwarsa.');
+      } else {
+        throw Exception('Gagal memuat transaksi. Status Code: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Gagal terhubung ke server saat mengambil transaksi: $e');
     }
   }
 }

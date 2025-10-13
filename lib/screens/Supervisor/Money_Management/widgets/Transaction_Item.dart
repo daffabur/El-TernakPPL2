@@ -1,87 +1,58 @@
-import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
-import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/widgets/Detail_Transaction.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/models/transaction_model.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
-class TransactionItem extends StatefulWidget {
-  final IconData icon;
-  final String title, date, amount;
-  final Color color;
+class TransactionItem extends StatelessWidget {
+  final TransactionModel transaction;
 
-  const TransactionItem({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.date,
-    required this.amount,
-    required this.color,
-  });
+  const TransactionItem({super.key, required this.transaction});
 
-  @override
-  State<TransactionItem> createState() => _TransactionItemState();
-}
+  // Fungsi untuk mendapatkan ikon berdasarkan kategori
+  IconData _getIconForCategory(String category) {
+    switch (category.toLowerCase()) {
+      case 'solar':
+        return Icons.local_gas_station;
+      case 'panen':
+        return Icons.agriculture;
+      case 'gaji':
+        return Icons.people;
+      case 'pakan':
+        return Icons.food_bank_outlined;
+      default:
+        return Icons.request_quote_outlined;
+    }
+  }
 
-class _TransactionItemState extends State<TransactionItem> {
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: (){
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                DetailTransaction()
-          )
-        );
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 25,
-                  backgroundColor: widget.color.withOpacity(0.15),
-                  child: Icon(
-                    widget.icon,
-                    color: widget.color,
-                    size: 36,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.title,
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 18,
-                        color: AppStyles.primaryColor,
-                      ),
-                    ),
-                    Text(
-                      widget.date,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: AppStyles.primaryColor,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            Text(
-              widget.amount,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w500,
-                color: AppStyles.primaryColor,
-              ),
-            ),
-          ],
+    final bool isPemasukan = transaction.jenis.toLowerCase() == 'pemasukan';
+    final Color amountColor = isPemasukan ? Colors.green : Colors.red;
+    final String prefix = isPemasukan ? "+ " : "- ";
+
+    // Format angka ke format mata uang
+    final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final String formattedTotal = currencyFormatter.format(transaction.total);
+
+    // Format tanggal
+    final String formattedDate = DateFormat('d MMM yyyy', 'id_ID').format(transaction.tanggal);
+
+    return Card(
+      elevation: 0,
+      color: Colors.transparent,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.grey[200],
+          child: Icon(_getIconForCategory(transaction.kategori), color: Colors.black54),
+        ),
+        title: Text(transaction.nama, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(formattedDate),
+        trailing: Text(
+          prefix + formattedTotal,
+          style: TextStyle(
+              color: amountColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 15
+          ),
         ),
       ),
     );

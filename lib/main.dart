@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:el_ternak_ppl2/login.dart';
 import 'package:google_fonts/google_fonts.dart';
-void main() {
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('id_ID', null);
   runApp(const ElTernakApp());
 }
 
@@ -20,6 +25,15 @@ class ElTernakApp extends StatelessWidget {
             Theme.of(context).textTheme
           )
       ),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('id', 'ID'), // Mendukung Bahasa Indonesia
+      ],
+      locale: const Locale('id', 'ID'),
       home: const LoginPage(),
     );
   }
