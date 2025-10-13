@@ -22,22 +22,18 @@ class _AccountManagementState extends State<AccountManagement> {
   @override
   void initState() {
     super.initState();
-    // Cukup panggil fungsi refresh sekali di initState
     _refreshUsers();
   }
-
-  // Fungsi untuk refresh data dengan memanggil API lagi
   void _refreshUsers() {
     setState(() {
       _usersFuture = apiService.getAllUsers();
     });
   }
 
-  // Fungsi untuk menampilkan bottom sheet mode TAMBAH
   void _showAddSheet() {
-    showModalBottomSheet<bool>( // Tambahkan <bool> untuk menangkap hasil
+    showModalBottomSheet<bool>(
       context: context,
-      isScrollControlled: false, // Sudah benar agar tidak full screen
+      isScrollControlled: false,
       builder: (context) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: const CustomBottomSheets(mode: BottomSheetMode.add),
@@ -58,22 +54,18 @@ class _AccountManagementState extends State<AccountManagement> {
     // floatingActionButton diletakkan sebagai properti dari Scaffold
     return Scaffold(
       appBar: AppBar(
-        // Menggunakan AppBar transparan agar search bar terlihat menyatu
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // Menempatkan CustomSearchBar di dalam AppBar agar posisinya benar
         title: const CustomSearchBar(),
       ),
       body: FutureBuilder<List<User>>(
         future: _usersFuture,
         builder: (context, snapshot) {
-          // Logika untuk menampilkan loading, error, atau data kosong
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
-            // Menampilkan pesan error yang lebih ramah
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -95,7 +87,6 @@ class _AccountManagementState extends State<AccountManagement> {
               final user = users[index];
               return CustomCardEmployee(
                 user: user,
-                // Implementasikan onDataChanged untuk me-refresh data setelah edit/delete
               );
             },
           );
