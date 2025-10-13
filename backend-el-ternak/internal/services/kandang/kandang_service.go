@@ -16,7 +16,7 @@ func CreateKandang(nama string, kapasitas int, idPenanggungJawab []uint) error {
 	newKandang := models.Kandang{
 		Nama: nama,
 		Kapasitas: kapasitas,
-		PenanggungJawab: penanggungJawab,
+		Penanggung_jawab: penanggungJawab,
 	}
 
 	if err := config.DB.Create(&newKandang).Error; err != nil {
@@ -35,11 +35,19 @@ func GetAllKandangData() ([]models.KandangSummary, error) {
 	return kandangs, nil
 }
 
-func GetKandangByID(id uint) (*models.KandangSummary, error) {
+func GetKandangByID(id uint) (*models.KandangDetail, error) {
 	kandang, err := repository.GetKandangByID(id)
 	if err != nil {
 		return nil, err
 	}
 
 	return kandang, nil
+}
+
+func DeleteKandangByID(id uint) error {
+	err := repository.DeleteKandangByID(id)
+	if err != nil {
+		return err
+	}
+	return nil
 }

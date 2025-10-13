@@ -18,4 +18,8 @@ func KandangRoutes(r *mux.Router)  {
 	kandang.Handle("/create", middleware.JwtMiddleware(
 		middleware.RoleMiddleware("petinggi")(http.HandlerFunc(handlers.CreateKandang)),
 	)).Methods("POST")
+
+	kandang.Handle("/{id}",middleware.JwtMiddleware(
+		middleware.RoleMiddleware("petinggi")(http.HandlerFunc(handlers.HandleKandangByID)),
+	)).Methods("GET", "DELETE")
 }

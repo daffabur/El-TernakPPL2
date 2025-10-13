@@ -75,7 +75,7 @@ func UpdateUserByUsername(username string, newData map[string]interface{}) error
 	return nil
 }
 
-func DeleteUserById(username string) error {
+func DeleteUserByUsername(username string) error {
 	err := repository.DeleteByUsername(username)
 	if err != nil {
 		return err

@@ -16,8 +16,8 @@ func TransaksiRoutes(r *mux.Router) {
 	)).Methods("GET")
 
 	transaksi.Handle("/{id}", middleware.JwtMiddleware(
-		middleware.RoleMiddleware("petinggi")(http.HandlerFunc(handlers.GetTransaksiByID)),
-	)).Methods("GET")
+		middleware.RoleMiddleware("petinggi")(http.HandlerFunc(handlers.HandleTransaksiByID)),
+	)).Methods("GET", "DELETE")
 
 	transaksi.Handle("/create", middleware.JwtMiddleware(
 		middleware.RoleMiddleware("petinggi")(http.HandlerFunc(handlers.CreateTransaksi)),

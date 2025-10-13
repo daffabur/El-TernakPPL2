@@ -3,6 +3,7 @@ package repository
 import (
 	"backend-el-ternak/internal/config"
 	"backend-el-ternak/internal/models"
+	"errors"
 )
 
 func CreateTransaksi(transaksi *models.Transaksi) error {
@@ -65,4 +66,20 @@ func GetTransaksiGroupByKategori(kategori string) ([]models.TransaksiForAll, err
 	}
 
 	return transaksi, nil
+}
+
+func DeleteTransaksiByID(id uint) error {
+	result := config.DB.Model(&models.Transaksi{}).
+		Where("id = ?", id).
+		Delete(&models.Transaksi{})
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return errors.New("id transaksi tidak ditemukan")
+	}
+
+	return nil
 }

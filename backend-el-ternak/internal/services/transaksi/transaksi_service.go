@@ -62,3 +62,11 @@ func GetTransaksiGroupByKategori(kategori string) ([]models.TransaksiForAll, err
 
 	return transaksis, nil
 }
+
+func DeleteTransaksiByID(id uint) error {
+	err := repository.DeleteTransaksiByID(id)
+	if err != nil {
+		return err
+	}
+	return nil
+}

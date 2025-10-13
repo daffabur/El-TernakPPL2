@@ -128,7 +128,7 @@ func DeletePegawai(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 	
-	err := services.DeleteUserById(req.Username)
+	err := services.DeleteUserByUsername(req.Username)
 	if err != nil {
 		if err.Error() == "not found" {
 			utils.RespondError(w, http.StatusNotFound, "user tidak ditemukan")

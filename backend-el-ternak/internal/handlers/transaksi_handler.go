@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"backend-el-ternak/internal/repository"
 	services "backend-el-ternak/internal/services/transaksi"
 	"backend-el-ternak/utils"
 	"encoding/json"
@@ -46,10 +47,10 @@ func GetAllTransaksi(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
-	utils.RespondSuccess(w, http.StatusOK, "berhasil mengambil data semua kandang", transaksis)
+	utils.RespondSuccess(w, http.StatusOK, "berhasil mengambil data semua transaksi", transaksis)
 }
 
-func GetTransaksiByID(w http.ResponseWriter, r *http.Request){
+func HandleTransaksiByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	idStr := vars["id"]
 
@@ -61,13 +62,36 @@ func GetTransaksiByID(w http.ResponseWriter, r *http.Request){
 
 	id := uint(idUint)
 
-	transaksi, err := services.GetTransaksiByID(id)
-	if err != nil {
-		utils.RespondError(w, http.StatusInternalServerError, "id tidak ditemukan")
-		return
-	}
+	switch r.Method {
+	case http.MethodGet:
+		transaksi, err := repository.GetTransaksiByID(uint(id))
+		if err != nil {
+			if err.Error() == "id transaksi tidak ditemukan" {
+				utils.RespondError(w, http.StatusNotFound, err.Error())
+				return
+			}
+			utils.RespondError(w, http.StatusInternalServerError, "gagal mengambil data transaksi")
+			return
+		}
 
-	utils.RespondSuccess(w, http.StatusOK, "berhasil mengambil data transaksi", transaksi)
+		utils.RespondSuccess(w, http.StatusOK, "berhasil mengambil data transaksi", transaksi)
+
+	case http.MethodDelete:
+		err := repository.DeleteTransaksiByID(uint(id))
+		if err != nil {
+			if err.Error() == "id transaksi tidak ditemukan" {
+				utils.RespondError(w, http.StatusNotFound, err.Error())
+				return
+			}
+			utils.RespondError(w, http.StatusInternalServerError, "gagal menghapus data transaksi")
+			return
+		}
+
+		utils.RespondSuccess(w, http.StatusOK, "berhasil menghapus data transaksi", nil)
+
+	default:
+		utils.RespondError(w, http.StatusMethodNotAllowed, "method tidak diizinkan")
+	}
 }
 
 func GetTransaksiGroupByJenis(w http.ResponseWriter, r *http.Request){
