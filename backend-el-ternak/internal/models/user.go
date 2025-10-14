@@ -13,6 +13,7 @@ type User struct {
 }
 
 type UserSummary struct {
+	Id uint `json:"id"`
 	Username string `json:"username"`
 	Role string `json:"role"`
 	IsActive bool `json:"is_active"`

@@ -41,17 +41,38 @@ func GetKandangByID(id uint) (*models.KandangDetail, error){
 }
 
 func UpdateKandangByID(id uint, newData map[string]interface{}) error {
-	result := config.DB.Debug().Model(&models.Kandang{}).Where("id = ?", id).Updates(newData)
+	tx := config.DB.Begin()
 
+	pjID, hasPj := newData["id_pj_kandang"]
+	delete(newData, "id_pj_kandang")
+
+	result := tx.Model(&models.Kandang{}).Where("id = ?", id).Updates(newData)
 	if result.Error != nil {
+		tx.Rollback()
 		return result.Error
 	}
-
 	if result.RowsAffected == 0 {
-		return fmt.Errorf("not found")
+		tx.Rollback()
+		return fmt.Errorf("kandang not found")
 	}
 
-	return nil
+	if hasPj {
+		if err := tx.Model(&models.User{}).
+			Where("kandang_id = ?", id).
+			Update("kandang_id", nil).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		if err := tx.Model(&models.User{}).
+			Where("id = ?", pjID).
+			Update("kandang_id", id).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit().Error
 }
 
 func DeleteKandangByID(id uint) error {
