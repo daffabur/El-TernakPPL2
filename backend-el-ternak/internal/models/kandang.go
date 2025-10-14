@@ -19,6 +19,7 @@ type Kandang struct{
 type KandangSummary struct{
 	ID int
 	Nama string
+	Kapasitas int
 	Populasi int
 }
 

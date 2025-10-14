@@ -14,7 +14,7 @@ func CreateKandang(kandang *models.Kandang) error {
 func GetAllKandang() ([]models.KandangSummary, error){
 	var kandangs []models.KandangSummary
 	err := config.DB.Model(&models.Kandang{}).
-	Select("id", "nama", "populasi").
+	Select("id", "nama", "kapasitas", "populasi").
 	Find(&kandangs).Error
 
 	if err != nil {
