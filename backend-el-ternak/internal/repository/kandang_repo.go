@@ -4,6 +4,7 @@ import (
 	"backend-el-ternak/internal/config"
 	"backend-el-ternak/internal/models"
 	"errors"
+	"fmt"
 )
 
 func CreateKandang(kandang *models.Kandang) error {
@@ -37,6 +38,20 @@ func GetKandangByID(id uint) (*models.KandangDetail, error){
 	}
 	
 	return &kandang, nil
+}
+
+func UpdateKandangByID(id uint, newData map[string]interface{}) error {
+	result := config.DB.Debug().Model(&models.Kandang{}).Where("id = ?", id).Updates(newData)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("not found")
+	}
+
+	return nil
 }
 
 func DeleteKandangByID(id uint) error {

@@ -84,6 +84,27 @@ func HandleKandangByID(w http.ResponseWriter, r *http.Request) {
 		}
 
 		utils.RespondSuccess(w, http.StatusOK, "berhasil menghapus data kandang", nil)
+	
+	case http.MethodPatch:
+		var input map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			utils.RespondError(w, http.StatusBadRequest, "invalid JSON body")
+			return
+		}
+		fmt.Println(input)
+		// return
+
+		err := repository.UpdateKandangByID(id, input)
+		if err != nil {
+			if err.Error() == "not found" {
+				utils.RespondError(w, http.StatusNotFound, "id kandang tidak ditemukan")
+				return
+			}
+			utils.RespondError(w, http.StatusBadRequest, "gagal mengupdate data kandang")
+			return
+		}
+
+		utils.RespondSuccess(w, http.StatusOK, "berhasil update data kandang", nil)
 
 	default:
 		utils.RespondError(w, http.StatusMethodNotAllowed, "method tidak diizinkan")
