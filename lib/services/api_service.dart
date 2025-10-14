@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/models/user_model.dart';
 
 class ApiService {
-  static const String _baseUrl = 'http://10.0.2.2:11222/api/';
+  static const String _baseUrl = 'http://localhost:11222/api/';
   final AuthService _authService = AuthService();
 
   // Helper untuk mendapatkan header otentikasi
@@ -160,6 +160,7 @@ class ApiService {
     }
   }
 
+  // Fungsi untuk mengambil seluruh transaksi
   Future<List<TransactionModel>> getAllTransactions() async {
     try {
       final headers = await _getAuthHeaders();
@@ -169,14 +170,8 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        // 1. Decode JSON response utama
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-
-        // 2. Akses list 'data' di dalam JSON
         final List<dynamic> dataList = jsonResponse['data'];
-
-        // 3. Ubah setiap item di dalam list menjadi objek TransactionModel
-        // dan kembalikan sebagai List<TransactionModel>
         return dataList.map((json) => TransactionModel.fromJson(json)).toList();
 
       } else if (response.statusCode == 401) {
@@ -188,4 +183,38 @@ class ApiService {
       throw Exception('Gagal terhubung ke server saat mengambil transaksi: $e');
     }
   }
-}
+
+  // Fungsi untuk mengambil total pengeluaran dan pemasukan
+  Future<double> getTotalAmounByType(String type) async{
+    if (type != 'pemasukan' && type != 'pengeluaran') {
+      throw Exception('Jenis transaksi tidak valid: $type');
+    }
+    try{
+      final headers = await _getAuthHeaders();
+      final response = await http.get (
+        Uri.parse('${_baseUrl}transaksi/jenis/$type'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        final responseBody = jsonDecode(response.body);
+        if (responseBody['success'] == true && responseBody['data'] != null) {
+          double totalAmount = 0.0;
+          for (var transaction in responseBody['data']) {
+            // Tambahkan nilai 'Total' ke totalAmount
+            totalAmount += (transaction['Total'] ?? 0).toDouble();
+          }
+          return totalAmount;
+        } else {
+          throw Exception('Gagal memuat data: ${responseBody['message']}');
+        }
+      } else if (response.statusCode == 401) {
+        throw Exception('Sesi anda habis, silakan login kembali.');
+      } else {
+        throw Exception('Gagal memuat data. Status: ${response.statusCode}');
+      }
+    }catch (e) {
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+    }
+  }
+

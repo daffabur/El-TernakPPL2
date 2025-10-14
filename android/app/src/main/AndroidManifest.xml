@@ -5,7 +5,8 @@
         android:label="el_ternak_ppl2"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true">   <!-- 🚀 ini penting untuk API http -->
+        android:usesCleartextTraffic="true"
+        >   <!-- 🚀 ini penting untuk API http -->
 
         <activity
             android:name=".MainActivity"

@@ -6,6 +6,7 @@ import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/widgets/Summa
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/widgets/Transaction_Item.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class MoneyManagement extends StatefulWidget {
   const MoneyManagement({super.key});
@@ -15,14 +16,15 @@ class MoneyManagement extends StatefulWidget {
 }
 
 class _MoneyManagementState extends State<MoneyManagement> {
-  // 1. Inisialisasi ApiService dan Future untuk data
   final ApiService _apiService = ApiService();
   late Future<List<TransactionModel>> _transactionsFuture;
+  late Future<double> _totalIncomeFuture;
+  late Future<double> _totalOutcomeFuture;
+  final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
   @override
   void initState() {
     super.initState();
-    // 2. Panggil fungsi untuk mengambil data saat halaman dimuat
     _loadTransactions();
   }
 
@@ -30,6 +32,8 @@ class _MoneyManagementState extends State<MoneyManagement> {
   void _loadTransactions() {
     setState(() {
       _transactionsFuture = _apiService.getAllTransactions();
+      _totalIncomeFuture = _apiService.getTotalAmounByType('pemasukan');
+      _totalOutcomeFuture = _apiService.getTotalAmounByType('pengeluaran');
     });
   }
 
@@ -160,26 +164,50 @@ class _MoneyManagementState extends State<MoneyManagement> {
                     ),
 
                     const SizedBox(height: 20),
-
-                    // --- SUMMARY CARDS ---
                     Row(
-                      children: const [
+                      children: [
                         Expanded(
-                          child: SummaryCard(
-                            image: "assets/images/ic_income.svg",
-                            color: Colors.green,
-                            title: "Pemasukan",
-                            amount: "Rp 25.000.000",
-                          ),
+                          child: FutureBuilder<double>(
+                              future: _totalIncomeFuture,
+                              builder: (context, snapshot) {
+                                String amountText = "Memuat...";
+                                if (snapshot.connectionState == ConnectionState.done){
+                                  if(snapshot.hasData){
+                                    amountText = currencyFormatter.format(snapshot.data!);
+                                  } else if (snapshot.hasError){
+                                    amountText = "Error";
+                                  }
+                                }
+                                return SummaryCard(
+                                  image: "assets/images/ic_income.svg",
+                                  color: Colors.green,
+                                  title: "Pemasukan",
+                                  amount: amountText,
+                                );
+                              }
+                          )
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: SummaryCard(
-                            image: "assets/images/ic_outcome.svg",
-                            color: Colors.red,
-                            title: "Pengeluaran",
-                            amount: "Rp 105.000.000",
-                          ),
+                          child: FutureBuilder<double>(
+                              future: _totalOutcomeFuture,
+                              builder: (context, snapshot) {
+                                String amountText = "Memuat...";
+                                if (snapshot.connectionState == ConnectionState.done){
+                                  if(snapshot.hasData){
+                                    amountText = currencyFormatter.format(snapshot.data!);
+                                  } else if (snapshot.hasError){
+                                    amountText = "Error";
+                                  }
+                                }
+                                return SummaryCard(
+                                  image: "assets/images/ic_outcome.svg",
+                                  color: Colors.red,
+                                  title: "Pengeluaran",
+                                  amount: amountText,
+                                );
+                              }
+                          )
                         ),
                       ],
                     ),
@@ -204,7 +232,6 @@ class _MoneyManagementState extends State<MoneyManagement> {
                     FutureBuilder<List<TransactionModel>>(
                       future: _transactionsFuture,
                       builder: (context, snapshot) {
-                        // Saat data sedang dimuat
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return const Center(child: CircularProgressIndicator());
                         }
@@ -224,6 +251,7 @@ class _MoneyManagementState extends State<MoneyManagement> {
                         return ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
+                          padding: EdgeInsets.zero,
                           itemCount: transactions.length,
                           itemBuilder: (context, index) {
                             final transaction = transactions[index];

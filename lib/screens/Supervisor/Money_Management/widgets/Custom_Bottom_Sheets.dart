@@ -1,15 +1,19 @@
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Digunakan untuk memformat input angka
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart'; // Digunakan untuk memformat angka menjadi mata uang
 
-enum CageSheetMode { add, edit }
+// Enum CageSheetMode tidak digunakan di file ini, bisa dihapus jika tidak ada referensi lain
+// enum CageSheetMode { add, edit }
 
 class CustomBottomSheets extends StatefulWidget {
-  final CageSheetMode mode;
+  // Mode tidak digunakan, jadi bisa dihapus jika tidak ada logika khusus untuk edit
+  // final CageSheetMode mode;
 
   const CustomBottomSheets({
     super.key,
-    this.mode = CageSheetMode.add,
+    // this.mode = CageSheetMode.add,
   });
 
   @override
@@ -17,32 +21,65 @@ class CustomBottomSheets extends StatefulWidget {
 }
 
 class _CustomBottomSheetsState extends State<CustomBottomSheets> {
+  // --- CONTROLLERS ---
   final _namaTransaksiController = TextEditingController();
   final _nominalController = TextEditingController();
-  final _jumlahController = TextEditingController(text: "120");
+  final _jumlahController = TextEditingController(text: "1"); // Mulai dari 1
   final _catatanController = TextEditingController();
+  // [FIX] Buat controller untuk Total di sini, bukan di build method
+  final _totalController = TextEditingController();
 
+  // --- STATE VARIABLES ---
   String? _selectedKategori;
-  String _selectedDate = "7 Agustus 2025";
+  String _selectedDate = "7 Agustus 2025"; // Ini masih statis, perlu diganti dengan DatePicker jika ingin dinamis
   bool _isPemasukan = true;
 
-  final List<String> _kategoriList = ["Solar", "Obat", "Pakan"];
+  final List<String> _kategoriList = ["Solar", "Obat", "Pakan", "Gaji", "Penjualan Ayam", "Lainnya"];
+  // [FIX] Buat NumberFormat untuk memformat angka ke Rupiah
+  final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+  @override
+  void initState() {
+    super.initState();
+    // [FIX] Tambahkan listener ke controller nominal dan jumlah
+    _nominalController.addListener(_updateTotal);
+    _jumlahController.addListener(_updateTotal);
+    // [FIX] Hitung total awal saat pertama kali dibuka
+    _updateTotal();
+  }
 
   @override
   void dispose() {
+    // [FIX] Pastikan semua listener dan controller di-dispose
+    _nominalController.removeListener(_updateTotal);
+    _jumlahController.removeListener(_updateTotal);
+
     _namaTransaksiController.dispose();
     _nominalController.dispose();
     _jumlahController.dispose();
     _catatanController.dispose();
+    _totalController.dispose(); // Jangan lupa dispose _totalController
     super.dispose();
+  }
+
+  // [FIX] Fungsi untuk menghitung dan memperbarui field Total
+  void _updateTotal() {
+    final double nominal = double.tryParse(_nominalController.text) ?? 0.0;
+    final int jumlah = int.tryParse(_jumlahController.text) ?? 1; // Default ke 1 jika tidak valid
+    final double total = nominal * jumlah;
+
+    // Format angka menjadi string mata uang dan set ke controller Total
+    _totalController.text = currencyFormatter.format(total);
   }
 
   void _handleSave() {
     // validasi sederhana
-    if (_namaTransaksiController.text.isEmpty || _selectedKategori == null) {
+    if (_namaTransaksiController.text.isEmpty ||
+        _selectedKategori == null ||
+        _nominalController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Lengkapi semua data wajib diisi!"),
+          content: Text("Nama, Kategori, dan Nominal wajib diisi!"),
           backgroundColor: Colors.red,
         ),
       );
@@ -54,10 +91,13 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
     print("Nama Transaksi: ${_namaTransaksiController.text}");
     print("Kategori: $_selectedKategori");
     print("Tanggal: $_selectedDate");
-    print("Nominal: ${_nominalController.text}");
+    print("Nominal (input): ${_nominalController.text}");
     print("Jumlah: ${_jumlahController.text}");
+    print("Total (terhitung): ${_totalController.text}");
     print("Catatan: ${_catatanController.text}");
 
+    // TODO: Ganti dengan logika API call Anda
+    // Navigator.pop(context, true); // Kirim 'true' untuk refresh data
     Navigator.pop(context);
   }
 
@@ -73,6 +113,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min, // Penting agar BottomSheet pas dengan konten
           children: [
             Center(
               child: Text(
@@ -94,7 +135,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
                     onPressed: () => setState(() => _isPemasukan = true),
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                      _isPemasukan ? AppStyles.primaryColor: Colors.white,
+                      _isPemasukan ? AppStyles.primaryColor : Colors.white,
                       foregroundColor:
                       _isPemasukan ? Colors.white : AppStyles.primaryColor,
                       shape: RoundedRectangleBorder(
@@ -127,12 +168,13 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
             const SizedBox(height: 20),
 
             // Nama Transaksi
-            Text("Nama Transaksi", style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+            Text("Nama Transaksi",
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
             TextField(
               controller: _namaTransaksiController,
               decoration: InputDecoration(
-                hintText: "Solar",
+                hintText: "cth: Penjualan 100 ekor ayam",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
@@ -156,7 +198,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
             ),
             const SizedBox(height: 15),
 
-            // Tanggal
+            // Tanggal (Rekomendasi: gunakan DatePicker)
             Text("Tanggal", style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
             TextField(
@@ -168,17 +210,24 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
+              onTap: () {
+                // TODO: Implementasi Date Picker untuk memilih tanggal
+              },
             ),
             const SizedBox(height: 15),
 
             // Nominal
-            Text("Nominal", style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+            Text("Nominal",
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
             TextField(
               controller: _nominalController,
               keyboardType: TextInputType.number,
+              // [FIX] Hanya izinkan input angka
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: InputDecoration(
-                hintText: "Rp 1.500.000",
+                hintText: "cth: 1500000",
+                prefixText: "Rp ",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
@@ -187,7 +236,8 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
             const SizedBox(height: 15),
 
             // Jumlah
-            Text("Jumlah", style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+            Text("Jumlah",
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -200,18 +250,24 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
                   IconButton(
                     icon: const Icon(Icons.remove),
                     onPressed: () {
-                      int jumlah = int.tryParse(_jumlahController.text) ?? 0;
-                      if (jumlah > 0) {
-                        setState(() {
-                          _jumlahController.text = (jumlah - 1).toString();
-                        });
+                      int jumlah = int.tryParse(_jumlahController.text) ?? 1;
+                      if (jumlah > 1) { // Batasi minimal 1
+                        _jumlahController.text = (jumlah - 1).toString();
+                        // _updateTotal() akan ter-trigger oleh listener
                       }
                     },
                   ),
                   Expanded(
                     child: Center(
-                      child: Text(
-                        _jumlahController.text,
+                      // [FIX] Gunakan TextField agar lebih konsisten
+                      child: TextField(
+                        controller: _jumlahController,
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [ FilteringTextInputFormatter.digitsOnly ],
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                        ),
                         style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
                       ),
                     ),
@@ -220,9 +276,8 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
                     icon: const Icon(Icons.add),
                     onPressed: () {
                       int jumlah = int.tryParse(_jumlahController.text) ?? 0;
-                      setState(() {
-                        _jumlahController.text = (jumlah + 1).toString();
-                      });
+                      _jumlahController.text = (jumlah + 1).toString();
+                      // _updateTotal() akan ter-trigger oleh listener
                     },
                   ),
                 ],
@@ -231,13 +286,14 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
             const SizedBox(height: 15),
 
             // Catatan
-            Text("Catatan", style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+            Text("Catatan",
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
             TextField(
               controller: _catatanController,
               maxLines: 2,
               decoration: InputDecoration(
-                hintText: "pembelian solar sebanyak 1 liter",
+                hintText: "cth: Pembelian solar sebanyak 10 liter",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
@@ -247,7 +303,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
 
             // Upload Bukti Transaksi
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () {}, // TODO: Implementasi upload file
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.black87,
@@ -262,16 +318,21 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
             const SizedBox(height: 15),
 
             // Total
-            Text("Total", style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+            Text("Total",
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
+            // [FIX] Gunakan _totalController yang sudah dibuat
             TextField(
               readOnly: true,
-              controller: TextEditingController(text: "Rp 180.000.000"),
+              controller: _totalController,
               decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.grey[200], // Beri warna beda agar jelas tidak bisa diedit
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600), // Buat teksnya tebal
             ),
             const SizedBox(height: 25),
 
@@ -288,7 +349,8 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text("Simpan", style: TextStyle(color: Colors.white)),
+                    child: const Text("Simpan",
+                        style: TextStyle(color: Colors.white)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -303,7 +365,8 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text("Batal", style: TextStyle(color: Colors.black87)),
+                    child: const Text("Batal",
+                        style: TextStyle(color: Colors.black87)),
                   ),
                 ),
               ],
