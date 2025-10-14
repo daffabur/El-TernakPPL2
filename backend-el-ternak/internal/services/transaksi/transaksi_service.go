@@ -36,6 +36,24 @@ func GetAllTransaksi() ([]models.TransaksiForAll, error) {
 	return transaksis, nil
 }
 
+func GetTransaksiSummary() (*models.TransaksiTotal, error) {
+	summary, err := repository.GetTransaksiSummary()
+	if err != nil {
+		return nil, err
+	}
+
+	return summary, nil
+}
+
+func GetTransaksiFiltered(periode string) ([]models.TransaksiForAll, error) {
+	transaksis, err :=repository.GetTransaksiFiltered(periode)
+	if err != nil {
+		return nil, err
+	}
+
+	return transaksis, nil
+}
+
 func GetTransaksiByID(id uint) (*models.TransaksiSummary, error) {
 	transaksi, err := repository.GetTransaksiByID(id)
 	if err != nil {

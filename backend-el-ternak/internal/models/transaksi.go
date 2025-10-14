@@ -38,3 +38,9 @@ type TransaksiForAll struct{
 	Kategori string
 	Total int
 }
+
+type TransaksiTotal struct{
+	Total_pengeluaran int
+	Total_pemasukan int
+	Saldo int
+}

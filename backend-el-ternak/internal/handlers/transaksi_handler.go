@@ -51,6 +51,7 @@ func GetAllTransaksi(w http.ResponseWriter, r *http.Request){
 }
 
 func HandleTransaksiByID(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("sampe ke sini kok di handler id")
 	vars := mux.Vars(r)
 	idStr := vars["id"]
 
@@ -92,6 +93,40 @@ func HandleTransaksiByID(w http.ResponseWriter, r *http.Request) {
 	default:
 		utils.RespondError(w, http.StatusMethodNotAllowed, "method tidak diizinkan")
 	}
+}
+
+func GetTransaksiSummary(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("sampe ke sini kok di handler summary")
+	summary, err := services.GetTransaksiSummary()
+	if err != nil {
+		utils.RespondError(w, http.StatusInternalServerError, "gagal mengambil data summary transaksi")
+		return
+	}
+
+	utils.RespondSuccess(w, http.StatusOK, "berhasil mengambil data summary transaksi", summary)
+}
+
+func GetTransaksiFiltered(w http.ResponseWriter, r *http.Request) {
+	periode := r.URL.Query().Get("periode")
+
+	validPeriode := map[string]bool{
+		"hari_ini" : true,
+		"minggu_ini" : true,
+		"bulan_ini" : true,
+	}
+
+	if !validPeriode[periode]{
+		utils.RespondError(w, http.StatusBadRequest, "periode tidak valid")
+		return
+	}
+
+	transaksis, err := services.GetTransaksiFiltered(periode)
+	if err != nil {
+		utils.RespondError(w, http.StatusInternalServerError, "gagal mengambil data transaksi")
+		return
+	}
+
+	utils.RespondSuccess(w, http.StatusOK, "berhasil mengambil data transaksi", transaksis)
 }
 
 func GetTransaksiGroupByJenis(w http.ResponseWriter, r *http.Request){
