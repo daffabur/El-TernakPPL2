@@ -91,8 +91,18 @@ func HandleKandangByID(w http.ResponseWriter, r *http.Request) {
 			utils.RespondError(w, http.StatusBadRequest, "invalid JSON body")
 			return
 		}
-		fmt.Println(input)
-		// return
+
+		if status, ok := input["status"]; ok {
+			strStatus, ok := status.(string)
+			if !ok {
+				utils.RespondError(w, http.StatusBadRequest, "status harus berupa string")
+				return
+			}
+			if strStatus != "active" && strStatus != "inactive" {
+				utils.RespondError(w, http.StatusBadRequest, "status hanya boleh 'active' atau 'inactive'")
+				return
+			}
+		}
 
 		err := repository.UpdateKandangByID(id, input)
 		if err != nil {
