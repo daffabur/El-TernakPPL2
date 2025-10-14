@@ -1,10 +1,22 @@
+import 'dart:convert';
+
+T? _parse<T>(dynamic value) {
+  if (value == null) return null;
+  if (T == double) return double.tryParse(value.toString()) as T?;
+  if (T == int) return int.tryParse(value.toString()) as T?;
+  return value as T?;
+}
+
 class TransactionModel {
   final int id;
   final DateTime tanggal;
   final String nama;
   final String jenis;
   final String kategori;
-  final int total;
+  final double total;
+
+  final String? catatan;
+  final String? bukti;
 
   TransactionModel({
     required this.id,
@@ -13,18 +25,28 @@ class TransactionModel {
     required this.jenis,
     required this.kategori,
     required this.total,
+    this.catatan,
+    this.bukti,
   });
 
-  // Factory constructor untuk membuat objek TransactionModel dari JSON
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
+    if (json['ID'] == null ||
+        json['Tanggal'] == null ||
+        json['Total'] == null) {
+      throw FormatException(
+        "JSON tidak valid: ID, Tanggal, atau Total tidak boleh null.",
+      );
+    }
+
     return TransactionModel(
       id: json['ID'],
-      // Parsing tanggal dari format string ISO 8601
-      tanggal: DateTime.parse(json['Tanggal']),
-      nama: json['Nama'],
-      jenis: json['Jenis'],
-      kategori: json['Kategori'],
-      total: json['Total'],
+      tanggal: DateTime.parse(json['Tanggal'] as String),
+      nama: json['Nama'] ?? 'Tanpa Nama',
+      jenis: json['Jenis'] ?? 'lainnya',
+      kategori: json['Kategori'] ?? 'Lainnya',
+      total: double.tryParse(json['Total'].toString()) ?? 0.0,
+      catatan: json['Catatan'],
+      bukti: json['Bukti'],
     );
   }
 }

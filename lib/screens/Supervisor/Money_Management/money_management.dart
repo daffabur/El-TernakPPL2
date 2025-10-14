@@ -4,6 +4,8 @@ import 'package:el_ternak_ppl2/services/api_service.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/widgets/Custom_Bottom_Sheets.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/widgets/Summary_Card.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/widgets/Transaction_Item.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/models/summary_model.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/models/transaction_model.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -18,9 +20,20 @@ class MoneyManagement extends StatefulWidget {
 class _MoneyManagementState extends State<MoneyManagement> {
   final ApiService _apiService = ApiService();
   late Future<List<TransactionModel>> _transactionsFuture;
-  late Future<double> _totalIncomeFuture;
-  late Future<double> _totalOutcomeFuture;
-  final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  late Future<SummaryModel> _summaryFuture;
+  final currencyFormatter = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 0,
+  );
+
+  String _selectedFilter = "Semua";
+  final Map<String, String> _filterMap = {
+    "Semua": "",
+    "Hari ini": "hari_ini",
+    "Minggu ini": "minggu_ini",
+    "Bulan ini": "bulan_ini",
+  };
 
   @override
   void initState() {
@@ -28,23 +41,36 @@ class _MoneyManagementState extends State<MoneyManagement> {
     _loadTransactions();
   }
 
-  // Fungsi untuk memuat atau me-refresh data
   void _loadTransactions() {
     setState(() {
-      _transactionsFuture = _apiService.getAllTransactions();
-      _totalIncomeFuture = _apiService.getTotalAmounByType('pemasukan');
-      _totalOutcomeFuture = _apiService.getTotalAmounByType('pengeluaran');
+      _summaryFuture = _apiService.getSummary();
+      final periode = _filterMap[_selectedFilter]!;
+
+      if (periode.isEmpty) {
+        _transactionsFuture = _apiService.getAllTransactions();
+      } else {
+        _transactionsFuture = _apiService.getFilteredTransactions(periode);
+      }
     });
   }
 
-  // 3. Fungsi untuk menampilkan bottom sheet
+  void _onFilterSelected(String filter) {
+    setState(() {
+      _selectedFilter = filter;
+    });
+
+    _loadTransactions();
+  }
+
   void _showAddSheet() {
     showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: const CustomBottomSheets(), // Pastikan CustomBottomSheets ada
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: const CustomBottomSheets(), 
       ),
     ).then((isSuccess) {
       if (isSuccess == true) {
@@ -58,7 +84,6 @@ class _MoneyManagementState extends State<MoneyManagement> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: RefreshIndicator(
-        // 4. Tambahkan RefreshIndicator agar bisa pull-to-refresh
         onRefresh: () async {
           _loadTransactions();
         },
@@ -66,14 +91,13 @@ class _MoneyManagementState extends State<MoneyManagement> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- HEADER SECTION (TOTAL SALDO) ---
               Container(
                 padding: const EdgeInsets.only(top: 60, bottom: 25, left: 35),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(20),
-                      bottomRight: Radius.circular(20)
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -86,47 +110,75 @@ class _MoneyManagementState extends State<MoneyManagement> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Total Saldo",
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.normal,
-                            color: AppStyles.primaryColor,
-                            fontSize: 20,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          "Rp.50.000.200", // Data ini nanti bisa dihitung dari hasil API
-                          style: GoogleFonts.poppins(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: AppStyles.primaryColor,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.add, size: 18),
-                          label: const Text("Tambah"),
-                          style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: AppStyles.primaryColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Total Saldo",
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.normal,
+                              color: AppStyles.primaryColor,
+                              fontSize: 20,
                             ),
                           ),
-                          onPressed: _showAddSheet,
-                        ),
-                      ],
+                          const SizedBox(height: 6),
+                          FutureBuilder<SummaryModel>(
+                            future: _summaryFuture,
+                            builder: (context, snapshot) {
+                              String saldoText = "Memuat...";
+                              if (snapshot.connectionState ==
+                                  ConnectionState.done) {
+                                if (snapshot.hasData) {
+                                  saldoText = currencyFormatter.format(
+                                    snapshot.data!.saldo,
+                                  );
+                                } else if (snapshot.hasError) {
+                                  saldoText = "Error";
+                                }
+                              }
+                              return FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  saldoText,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppStyles.primaryColor,
+                                  ),
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          ElevatedButton.icon(
+                            label: const Text("Add"),
+                            icon: const Icon(Icons.add, size: 18),
+                            style: ElevatedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              backgroundColor: AppStyles.primaryColor,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            onPressed: _showAddSheet,
+                          ),
+                        ],
+                      ),
                     ),
-                    ClipRRect(
-                      child: Image.asset(
-                        'assets/images/ic_totalSaldo.png',
-                        width: MediaQuery.of(context).size.width * 0.3,
-                        fit: BoxFit.fitHeight,
-                        height: MediaQuery.of(context).size.width * 0.3,
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: ClipRRect(
+                        child: Image.asset(
+                          'assets/images/ic_totalSaldo.png',
+                          width: MediaQuery.of(context).size.width * 0.3,
+                          fit: BoxFit.contain,
+                          height: MediaQuery.of(context).size.width * 0.3,
+                        ),
                       ),
                     ),
                   ],
@@ -138,78 +190,81 @@ class _MoneyManagementState extends State<MoneyManagement> {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    // --- FILTER SECTION ---
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: [
-                          for (final label in [ "Semua", "Hari ini", "Minggu ini", "Bulanan ini", "Tahun" ])
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: FilterChip(
-                                label: Text(label),
-                                showCheckmark: false,
-                                selected: label == "Semua",
-                                selectedColor: AppStyles.highlightColor,
-                                backgroundColor: Colors.white,
-                                labelStyle: GoogleFonts.poppins(
-                                  color: label == "Semua" ? Colors.white : AppStyles.highlightColor,
-                                ),
-                                side: const BorderSide(color: Colors.grey),
-                                onSelected: (_) {},
+                        children: _filterMap.keys.map((label) {
+                          final bool isSelected = _selectedFilter == label;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(label),
+                              showCheckmark: false,
+                              selected: isSelected,
+                              selectedColor: AppStyles.highlightColor,
+                              backgroundColor: Colors.white,
+                              labelStyle: GoogleFonts.poppins(
+                                color: isSelected
+                                    ? Colors.white
+                                    : AppStyles.highlightColor,
                               ),
+                              side: BorderSide(
+                                color: isSelected
+                                    ? AppStyles.primaryColor
+                                    : Colors.grey.shade400,
+                              ),
+                              onSelected: (_) {
+                                _onFilterSelected(label);
+                              },
                             ),
-                        ],
+                          );
+                        }).toList(),
                       ),
                     ),
 
                     const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FutureBuilder<double>(
-                              future: _totalIncomeFuture,
-                              builder: (context, snapshot) {
-                                String amountText = "Memuat...";
-                                if (snapshot.connectionState == ConnectionState.done){
-                                  if(snapshot.hasData){
-                                    amountText = currencyFormatter.format(snapshot.data!);
-                                  } else if (snapshot.hasError){
-                                    amountText = "Error";
-                                  }
-                                }
-                                return SummaryCard(
-                                  image: "assets/images/ic_income.svg",
-                                  color: Colors.green,
-                                  title: "Pemasukan",
-                                  amount: amountText,
-                                );
-                              }
-                          )
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FutureBuilder<double>(
-                              future: _totalOutcomeFuture,
-                              builder: (context, snapshot) {
-                                String amountText = "Memuat...";
-                                if (snapshot.connectionState == ConnectionState.done){
-                                  if(snapshot.hasData){
-                                    amountText = currencyFormatter.format(snapshot.data!);
-                                  } else if (snapshot.hasError){
-                                    amountText = "Error";
-                                  }
-                                }
-                                return SummaryCard(
-                                  image: "assets/images/ic_outcome.svg",
-                                  color: Colors.red,
-                                  title: "Pengeluaran",
-                                  amount: amountText,
-                                );
-                              }
-                          )
-                        ),
-                      ],
+                    FutureBuilder<SummaryModel>(
+                      future: _summaryFuture,
+                      builder: (context, snapshot) {
+                        String incomeText = "Memuat...";
+                        String outcomeText = "Memuat...";
+
+                        if (snapshot.connectionState == ConnectionState.done) {
+                          if (snapshot.hasData) {
+                            incomeText = currencyFormatter.format(
+                              snapshot.data!.totalPemasukan,
+                            );
+                            outcomeText = currencyFormatter.format(
+                              snapshot.data!.totalPengeluaran,
+                            );
+                          } else if (snapshot.hasError) {
+                            incomeText = "Error";
+                            outcomeText = "Error";
+                          }
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: SummaryCard(
+                                image: "assets/images/ic_income.svg",
+                                color: Colors.green,
+                                title: "Pemasukan",
+                                amount: incomeText,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: SummaryCard(
+                                image: "assets/images/ic_outcome.svg",
+                                color: Colors.red,
+                                title: "Pengeluaran",
+                                amount: outcomeText,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
 
                     const SizedBox(height: 20),
@@ -232,18 +287,25 @@ class _MoneyManagementState extends State<MoneyManagement> {
                     FutureBuilder<List<TransactionModel>>(
                       future: _transactionsFuture,
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
                         }
 
                         // Jika terjadi error
                         if (snapshot.hasError) {
-                          return Center(child: Text("Terjadi error: ${snapshot.error}"));
+                          return Center(
+                            child: Text("Terjadi error: ${snapshot.error}"),
+                          );
                         }
 
                         // Jika data tidak ada atau kosong
                         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          return const Center(child: Text("Belum ada transaksi."));
+                          return const Center(
+                            child: Text("Belum ada transaksi."),
+                          );
                         }
 
                         // Jika data berhasil dimuat
@@ -255,9 +317,7 @@ class _MoneyManagementState extends State<MoneyManagement> {
                           itemCount: transactions.length,
                           itemBuilder: (context, index) {
                             final transaction = transactions[index];
-                            return TransactionItem(
-                              transaction: transaction,
-                            );
+                            return TransactionItem(transaction: transaction);
                           },
                         );
                       },

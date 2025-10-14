@@ -1,4 +1,3 @@
-
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -38,30 +37,33 @@ class SummaryCard extends StatelessWidget {
         children: [
           ClipRRect(
             child: SvgPicture.asset(
-                image,
-                width: MediaQuery.of(context).size.width * 0.1,
-                fit: BoxFit.fitHeight,
-                height: MediaQuery.of(context).size.width * 0.1
+              image,
+              width: MediaQuery.of(context).size.width * 0.1,
+              fit: BoxFit.fitHeight,
+              height: MediaQuery.of(context).size.width * 0.1,
             ),
           ),
-         SizedBox(height: 20,),
-         Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: GoogleFonts.poppins(
-                    color: AppStyles.primaryColor.withOpacity(0.5),
-                    fontSize: 15,
-                )
+          SizedBox(height: 20),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  color: AppStyles.primaryColor.withOpacity(0.5),
+                  fontSize: 15,
                 ),
-                const SizedBox(height: 4),
-                Text(amount,
-                    style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15
-                    )
+              ),
+              const SizedBox(height: 4),
+              Text(
+                amount,
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
         ],
       ),
     );

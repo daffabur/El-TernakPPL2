@@ -1,3 +1,4 @@
+import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/models/summary_model.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/models/transaction_model.dart';
 import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:http/http.dart' as http;
@@ -5,7 +6,7 @@ import 'dart:convert';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/models/user_model.dart';
 
 class ApiService {
-  static const String _baseUrl = 'http://localhost:11222/api/';
+  static const String _baseUrl = 'http://10.0.2.2:11222/api/';
   final AuthService _authService = AuthService();
 
   // Helper untuk mendapatkan header otentikasi
@@ -184,6 +185,37 @@ class ApiService {
     }
   }
 
+  // Fungsi untuk mengambil transaksi berdasarkan periode
+  Future<List<TransactionModel>> getFilteredTransactions(String periode) async {
+    // Validasi untuk memastikan periode tidak kosong
+    if (periode.isEmpty) {
+      // Jika periode kosong, kembalikan daftar kosong atau panggil getAllTransactions
+      return getAllTransactions();
+    }
+
+    print("Memanggil API filter dengan periode: $periode"); // Untuk debugging
+
+    try {
+      final response = await http.get(
+
+        Uri.parse('${_baseUrl}transaksi/filter?periode=$periode'),
+        headers: await _getAuthHeaders(),
+      );
+
+      print("Status Code Filter: ${response.statusCode}"); // Untuk debugging
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        final List<dynamic> dataList = jsonResponse['data'];
+        return dataList.map((json) => TransactionModel.fromJson(json)).toList();
+      } else {
+        throw Exception('Gagal memuat transaksi terfilter. Status Code: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Gagal terhubung ke server saat filtering: $e');
+    }
+  }
+
   // Fungsi untuk mengambil total pengeluaran dan pemasukan
   Future<double> getTotalAmounByType(String type) async{
     if (type != 'pemasukan' && type != 'pengeluaran') {
@@ -216,5 +248,118 @@ class ApiService {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
     }
+
+  // Fungsi untuk membuat transaksi baru
+  Future<void> createTransaction(Map<String, dynamic> transactionData) async {
+    print("Mencoba membuat transaksi dengan data: $transactionData"); // Untuk debugging
+    try {
+      final headers = await _getAuthHeaders();
+      final response = await http.post(
+        Uri.parse('${_baseUrl}transaksi/create'), // Endpoint POST untuk membuat transaksi
+        headers: headers,
+        body: jsonEncode(transactionData),
+      );
+
+      print("Status Code Create Transaction: ${response.statusCode}"); // Untuk debugging
+      print("Response Body: ${response.body}"); // Untuk debugging
+
+      // API yang baik biasanya mengembalikan 201 (Created) atau 200 (OK)
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        // Coba parsing pesan error dari backend
+        try {
+          final responseBody = jsonDecode(response.body);
+          final errorMessage = responseBody['message'] ?? 'Gagal membuat transaksi.';
+          throw Exception(errorMessage);
+        } catch (_) {
+          // Jika parsing gagal, tampilkan error umum
+          throw Exception('Gagal membuat transaksi. Status: ${response.statusCode}');
+        }
+      }
+      print('Transaksi berhasil dibuat: ${response.body}');
+    } catch (e) {
+      // Lempar kembali error yang sudah diformat dari _getAuthHeaders atau error lainnya
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
+    }
+  }
+
+  // Fungsi untuk mengambil total saldo
+  Future<SummaryModel> getSummary() async {
+    print("===== MEMULAI GET SUMMARY ====="); // Untuk debugging
+    try {
+      final headers = await _getAuthHeaders();
+      final response = await http.get(
+        Uri.parse('${_baseUrl}transaksi/summary'),
+        headers: headers,
+      );
+
+      print("Status Code Summary: ${response.statusCode}"); // Untuk debugging
+      print("Response Body Summary: ${response.body}");   // Untuk debugging
+
+      if (response.statusCode == 200) {
+        // 1. Decode seluruh response body terlebih dahulu
+        final Map<String, dynamic> responseBody = jsonDecode(response.body);
+
+        // 2. Cek apakah ada wrapper 'data' dan 'data' tersebut adalah Map
+        if (responseBody.containsKey('data') && responseBody['data'] is Map<String, dynamic>) {
+          print("Parsing summary dari dalam object 'data'.");
+          return SummaryModel.fromJson(responseBody['data']);
+        } else {
+          print("Parsing summary dari root object.");
+          return SummaryModel.fromJson(responseBody);
+        }
+      } else {
+        throw Exception('Gagal memuat summary. Status Code: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Gagal terhubung ke server saat mengambil summary: $e');
+    }
+  }
+
+  // Fungsi untuk delete transaction
+  Future<void> deleteTransaction(int transactionId) async {
+    print("Mencoba menghapus transaksi dengan ID: $transactionId"); // Untuk debugging
+
+    try {
+      final response = await http.delete(
+        Uri.parse('${_baseUrl}transaksi/$transactionId'),
+        headers: await _getAuthHeaders(),
+      );
+
+      print("Status Code Delete: ${response.statusCode}");
+      print("Response Body Delete: ${response.body}");
+
+      // Status 200 (OK) atau 204 (No Content) adalah sukses untuk DELETE
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('Gagal menghapus transaksi. Status: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Gagal terhubung ke server saat menghapus: $e');
+    }
+  }
+
+  //fungsi untuk mendapatkan detail transaksi
+  Future<TransactionModel> getTransactionById(int transactionId) async {
+    print("Mengambil detail untuk transaksi ID: $transactionId"); // Debugging
+
+    try {
+      final response = await http.get(
+        Uri.parse('${_baseUrl}transaksi/$transactionId'),
+        headers: await _getAuthHeaders(),
+      );
+
+      print("Status Code Detail: ${response.statusCode}"); // Debugging
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        // Data transaksi ada di dalam key 'data'
+        return TransactionModel.fromJson(jsonResponse['data']);
+      } else {
+        throw Exception('Gagal memuat detail transaksi. Status: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Gagal terhubung ke server saat mengambil detail: $e');
+    }
+  }
+
   }
 
