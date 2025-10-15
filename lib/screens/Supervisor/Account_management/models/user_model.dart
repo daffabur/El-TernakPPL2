@@ -44,4 +44,10 @@ class User {
     isActive: json["is_active"],
     kandangId: json['kandangID'],
   );
+
+  get name => null;
+
+  get fullName => null;
+
+  get nama => null;
 }
