@@ -67,9 +67,13 @@ func Login(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
-	data := map[string]string{
+	data := map[string]interface{}{
 		"token": token,
 		"role": user.Role,
+	}
+
+	if user.Role == "pegawai" && user.KandangID != nil {
+		data["kandang_id"] = *user.KandangID
 	}
 
 	utils.RespondSuccess(w, http.StatusOK, "Login Berhasil", data)
