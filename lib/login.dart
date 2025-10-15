@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'package:el_ternak_ppl2/services/api_service.dart';   // <-- TAMBAHKAN
-import 'package:el_ternak_ppl2/services/auth_service.dart'; // <-- TAMBAHKAN
-import 'package:flutter/foundation.dart';
+import 'package:el_ternak_ppl2/screens/Employee/bottom_nav_bar_peg.dart';
+import 'package:el_ternak_ppl2/services/api_service.dart';
+import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
+// Navbar supervisor (atasan)
 import 'package:el_ternak_ppl2/base/bottom_nav_bar.dart';
-import 'package:el_ternak_ppl2/screens/Employee/Home_Screen/home_screen.dart';
 
 enum UserRole { atasan, pegawai, unknown }
 
@@ -17,14 +17,12 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-
   final _formKey = GlobalKey<FormState>();
   final _username = TextEditingController();
   final _password = TextEditingController();
   bool _obscure = true;
   bool _isSubmitting = false;
 
-  // === Buat Instance dari Service Anda ===
   final ApiService _apiService = ApiService();
   final AuthService _authService = AuthService();
 
@@ -43,7 +41,50 @@ class _LoginPageState extends State<LoginPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  // === FUNGSI LOGIN YANG DIPERBARUI ===
+  // --- Util aman untuk decode payload JWT ---
+  Map<String, dynamic> _decodeJwtPayload(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) throw const FormatException('Invalid token');
+      final normalized = base64Url.normalize(parts[1]);
+      final payloadStr = utf8.decode(base64Url.decode(normalized));
+      final jsonMap = json.decode(payloadStr);
+      return (jsonMap is Map<String, dynamic>) ? jsonMap : <String, dynamic>{};
+    } catch (_) {
+      return <String, dynamic>{};
+    }
+  }
+
+  // --- Ambil role dari beberapa kemungkinan field ---
+  UserRole _mapRoleFromPayload(Map<String, dynamic> payload) {
+    String raw = '';
+
+    // Coba beberapa lokasi/format umum
+    if (payload['role'] != null)
+      raw = payload['role'].toString();
+    else if (payload['Role'] != null)
+      raw = payload['Role'].toString();
+    else if (payload['roles'] is List &&
+        (payload['roles'] as List).isNotEmpty) {
+      raw = (payload['roles'] as List).first.toString();
+    } else if (payload['data'] is Map &&
+        (payload['data'] as Map)['role'] != null) {
+      raw = (payload['data'] as Map)['role'].toString();
+    }
+
+    final r = raw.toLowerCase().trim();
+
+    // Sinkronkan sebutan
+    if (r == 'pegawai' || r == 'employee' || r == 'karyawan') {
+      return UserRole.pegawai;
+    }
+    if (r == 'petinggi' || r == 'atasan' || r == 'supervisor' || r == 'admin') {
+      return UserRole.atasan;
+    }
+    return UserRole.unknown;
+  }
+
+  // === LOGIN ===
   Future<void> _doLogin() async {
     if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
@@ -51,53 +92,40 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isSubmitting = true);
 
     try {
-      // 1. Panggil fungsi login dari ApiService
-      // Fungsi ini sudah menangani request dan parsing JSON dasar
+      // 1) minta token
       final token = await _apiService.login(
         _username.text.trim(),
         _password.text,
       );
 
-      // 2. Simpan token menggunakan AuthService (SANGAT PENTING!)
+      // 2) simpan token
       await _authService.saveToken(token);
 
-      // 3. Decode token untuk mendapatkan role (jika role ada di dalam token)
-      //    Ini adalah cara standar untuk mendapatkan info dari JWT tanpa perlu library tambahan.
-      final parts = token.split('.');
-      if (parts.length != 3) {
-        throw Exception('Invalid token format');
-      }
-      final payload = json.decode(
-          utf8.decode(base64Url.decode(base64Url.normalize(parts[1])))
-      );
-
-      final roleStr = (payload['role'] ?? '').toString().toLowerCase().trim();
-      final role = (roleStr == 'petinggi' || roleStr == 'atasan')
-          ? UserRole.atasan
-          : (roleStr == 'pegawai')
-          ? UserRole.pegawai
-          : UserRole.unknown;
+      // 3) baca role dari payload JWT
+      final payload = _decodeJwtPayload(token);
+      final role = _mapRoleFromPayload(payload);
 
       if (role == UserRole.unknown) {
-        throw Exception('User role not found in token.');
+        throw Exception('User role tidak ditemukan pada token.');
       }
 
       if (!mounted) return;
 
-      // 4. Navigasi berdasarkan role
+      // 4) arahkan sesuai role
       if (role == UserRole.pegawai) {
+        // <-- PENTING: arahkan ke NAVBAR PEGAWAI supaya bar-nya muncul
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          MaterialPageRoute(builder: (_) => const BottomNavBarPeg()),
         );
-      } else { // UserRole.atasan
+      } else {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const BottomNavBar()),
         );
       }
     } catch (e) {
-      _showSnack(e.toString().replaceAll("Exception: ", ""));
+      _showSnack(e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -115,11 +143,11 @@ class _LoginPageState extends State<LoginPage> {
       borderRadius: BorderRadius.circular(30),
       borderSide: const BorderSide(color: orange, width: 2),
     ),
-    errorBorder: OutlineInputBorder( // Tambahkan ini untuk konsistensi
+    errorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(30),
       borderSide: const BorderSide(color: Colors.red, width: 1),
     ),
-    focusedErrorBorder: OutlineInputBorder( // Tambahkan ini untuk konsistensi
+    focusedErrorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(30),
       borderSide: const BorderSide(color: Colors.red, width: 2),
     ),
@@ -145,7 +173,7 @@ class _LoginPageState extends State<LoginPage> {
                 TextFormField(
                   controller: _username,
                   validator: (v) =>
-                  (v == null || v.isEmpty) ? "Username wajib diisi" : null,
+                      (v == null || v.isEmpty) ? "Username wajib diisi" : null,
                   textInputAction: TextInputAction.next,
                   decoration: _roundedInput("Username"),
                 ),
@@ -156,7 +184,7 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _password,
                   obscureText: _obscure,
                   validator: (v) =>
-                  (v == null || v.isEmpty) ? "Password wajib diisi" : null,
+                      (v == null || v.isEmpty) ? "Password wajib diisi" : null,
                   onFieldSubmitted: (_) => _doLogin(),
                   decoration: _roundedInput("Password").copyWith(
                     suffixIcon: IconButton(
@@ -186,17 +214,17 @@ class _LoginPageState extends State<LoginPage> {
                     onPressed: _isSubmitting ? null : _doLogin,
                     child: _isSubmitting
                         ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
                         : const Text(
-                      "Login",
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
+                            "Login",
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
                   ),
                 ),
               ],

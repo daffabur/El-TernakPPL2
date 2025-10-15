@@ -9,7 +9,9 @@ class ApiService {
   static const String _baseUrl = 'http://10.0.2.2:11222/api/';
   final AuthService _authService = AuthService();
 
+  // =========================================================
   // Helper untuk mendapatkan header otentikasi
+  // =========================================================
   Future<Map<String, String>> _getAuthHeaders() async {
     final token = await _authService.getToken();
     if (token == null) {
@@ -17,26 +19,25 @@ class ApiService {
     }
     return {
       'Content-Type': 'application/json; charset=UTF-8',
-      'Authorization': 'Bearer $token'
+      'Authorization': token, // sesuai pola GET lain di project-mu
     };
   }
 
-  // Fungsi untuk Login
+  // =========================================================
+  // AUTH: Login
+  // =========================================================
   Future<String> login(String username, String password) async {
     final response = await http.post(
       Uri.parse('${_baseUrl}auth/login'),
       headers: {'Content-Type': 'application/json; charset=UTF-8'},
-      body: jsonEncode({
-        'username': username,
-        'password': password,
-      }),
+      body: jsonEncode({'username': username, 'password': password}),
     );
 
     if (response.statusCode == 200) {
       final responseBody = jsonDecode(response.body);
-      final String? token = responseBody['data']['token'];
+      final String? token = responseBody['data']?['token'];
       if (token != null && token.isNotEmpty) {
-        print('Login successful, token received.');
+        // print('Login successful, token received.');
         return token;
       } else {
         throw Exception('Respons login tidak valid: token tidak ditemukan.');
@@ -44,7 +45,8 @@ class ApiService {
     } else {
       try {
         final responseBody = jsonDecode(response.body);
-        final errorMessage = responseBody['message'] ?? 'Username atau password salah.';
+        final errorMessage =
+            responseBody['message'] ?? 'Username atau password salah.';
         throw Exception(errorMessage);
       } catch (_) {
         throw Exception('Gagal login. Status: ${response.statusCode}');
@@ -52,7 +54,10 @@ class ApiService {
     }
   }
 
-  // Fungsi untuk mendapatkan semua user
+  // =========================================================
+  // MANAGE ACCOUNT: Get all users
+  // GET /manage/
+  // =========================================================
   Future<List<User>> getAllUsers() async {
     try {
       final headers = await _getAuthHeaders();
@@ -74,12 +79,60 @@ class ApiService {
         throw Exception('Gagal memuat data. Status: ${response.statusCode}');
       }
     } catch (e) {
-      // Lempar kembali error yang sudah diformat atau error koneksi
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
 
-  // Fungsi untuk membuat user baru
+  // =========================================================
+  // MANAGE ACCOUNT: Get pegawai only
+  // GET /manage/pegawai
+  // (dipakai utk dropdown Penanggung Jawab)
+  // =========================================================
+  Future<List<User>> getPegawaiOnly() async {
+    try {
+      final headers = await _getAuthHeaders();
+      final res = await http.get(
+        Uri.parse('${_baseUrl}manage/pegawai'),
+        headers: headers,
+      );
+
+      if (res.statusCode != 200) {
+        if (res.statusCode == 401) {
+          throw Exception('Sesi anda habis, tolong login kembali');
+        }
+        throw Exception('Gagal memuat pegawai. Status: ${res.statusCode}');
+      }
+
+      final body = jsonDecode(res.body);
+      final data = (body is Map<String, dynamic>) ? body['data'] : body;
+
+      if (data is List) {
+        // Pastikan mapping aman meskipun response hanya berisi sebagian field.
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map<User>((j) => User.fromJson(j))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  // Opsional: hanya pegawai aktif (kalau model User punya isActive/is_active)
+  Future<List<User>> getActivePegawaiOnly() async {
+    final list = await getPegawaiOnly();
+    // Sesuaikan properti boolean aktif di model User kamu
+    return list.where((u) {
+      final v = (u.isActive ?? u.isActive ?? true);
+      return v == true;
+    }).toList();
+  }
+
+  // =========================================================
+  // MANAGE ACCOUNT: Create user
+  // POST /manage/create
+  // =========================================================
   Future<void> createUser(Map<String, dynamic> userData) async {
     try {
       final headers = await _getAuthHeaders();
@@ -98,14 +151,20 @@ class ApiService {
           throw Exception('Gagal membuat user. Status: ${response.statusCode}');
         }
       }
-      print('User berhasil dibuat: ${response.body}');
+      // print('User berhasil dibuat: ${response.body}');
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
 
-  // Fungsi untuk memperbarui user
-  Future<void> updateUser(String originalUsername, Map<String, dynamic> updateData) async {
+  // =========================================================
+  // MANAGE ACCOUNT: Update user
+  // PUT /manage/edit
+  // =========================================================
+  Future<void> updateUser(
+    String originalUsername,
+    Map<String, dynamic> updateData,
+  ) async {
     try {
       final headers = await _getAuthHeaders();
       final response = await http.put(
@@ -117,29 +176,31 @@ class ApiService {
       if (response.statusCode != 200) {
         try {
           final responseBody = jsonDecode(response.body);
-          final errorMessage = responseBody['message'] ?? 'Gagal memperbarui user.';
+          final errorMessage =
+              responseBody['message'] ?? 'Gagal memperbarui user.';
           throw Exception(errorMessage);
         } catch (_) {
-          throw Exception('Gagal memperbarui user. Status: ${response.statusCode}');
+          throw Exception(
+            'Gagal memperbarui user. Status: ${response.statusCode}',
+          );
         }
       }
-      print('User "$originalUsername" berhasil diperbarui: ${response.body}');
+      // print('User "$originalUsername" berhasil diperbarui: ${response.body}');
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
 
-  // Fungsi untuk menghapus user
+  // =========================================================
+  // MANAGE ACCOUNT: Delete user
+  // DELETE /manage/delete (body: { username })
+  // =========================================================
   Future<void> deleteUser(String username) async {
     try {
       final url = Uri.parse('${_baseUrl}manage/delete');
       final body = jsonEncode({'username': username});
 
-      print('DELETE Request to: $url');
-      print('With body: $body');
-
       final request = http.Request('DELETE', url);
-      // 'await' diperlukan di sini karena _getAuthHeaders() adalah Future
       request.headers.addAll(await _getAuthHeaders());
       request.body = body;
 
@@ -149,13 +210,14 @@ class ApiService {
       if (response.statusCode != 200) {
         try {
           final responseBody = jsonDecode(response.body);
-          final errorMessage = responseBody['message'] ?? 'Gagal menghapus user.';
+          final errorMessage =
+              responseBody['message'] ?? 'Gagal menghapus user.';
           throw Exception(errorMessage);
         } catch (_) {
           throw Exception('Gagal menghapus. Status: ${response.statusCode}');
         }
       }
-      print('User "$username" berhasil dihapus.');
+      // print('User "$username" berhasil dihapus.');
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
