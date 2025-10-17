@@ -15,4 +15,5 @@ func RegisteredRoutes(r *mux.Router)  {
 	ManageRoutes(api)
 	KandangRoutes(api)
 	TransaksiRoutes(api)
+	LaporanRoutes(api)
 }

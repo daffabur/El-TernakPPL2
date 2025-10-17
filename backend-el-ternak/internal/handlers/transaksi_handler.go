@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -16,6 +17,7 @@ type CreateTransaksiData struct{
 	Nama string
 	Jenis string
 	Kategori string
+	Tanggal string
 	Nominal int
 	Jumlah int
 	Catatan string
@@ -30,7 +32,15 @@ func CreateTransaksi(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := services.CreateTransaksi(data.Nama, data.Jenis, data.Kategori, data.Nominal, data.Jumlah, data.Catatan, data.Bukti_transaksi, data.Total)
+	parsedDate, err := time.Parse(time.RFC3339, data.Tanggal)
+	fmt.Println(parsedDate)
+
+	if err != nil {
+		utils.RespondError(w, http.StatusBadRequest, "invalid time format")
+		return
+	}
+
+	err = services.CreateTransaksi(data.Nama, data.Jenis, data.Kategori, parsedDate, data.Nominal, data.Jumlah, data.Catatan, data.Bukti_transaksi, data.Total)
 
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, "internal server error")
@@ -51,7 +61,6 @@ func GetAllTransaksi(w http.ResponseWriter, r *http.Request){
 }
 
 func HandleTransaksiByID(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("sampe ke sini kok di handler id")
 	vars := mux.Vars(r)
 	idStr := vars["id"]
 

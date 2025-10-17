@@ -31,6 +31,7 @@ func ConnectDB() {
 	fmt.Println("Berhasil terhubung ke database")
 
 	err = DB.AutoMigrate(
+		&models.Laporan{},
 		&models.Transaksi{},
 		&models.User{},
 		&models.Kandang{},

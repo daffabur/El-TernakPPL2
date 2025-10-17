@@ -4,21 +4,24 @@ import (
 	"backend-el-ternak/internal/config"
 	"backend-el-ternak/internal/models"
 	"backend-el-ternak/internal/repository"
+	"fmt"
 	"time"
 )
 
-func CreateTransaksi(nama, jenis, kategori string, nominal int, jumlah int, catatan string, linkbukti string, total int) error {
+func CreateTransaksi(nama, jenis, kategori string, tanggal time.Time, nominal int, jumlah int, catatan string, linkbukti string, total int) error {
 	newTransaksi := models.Transaksi{
 		Nama: nama,
 		Jenis: jenis,
 		Kategori: kategori,
-		Tanggal: time.Now(),
+		Tanggal: tanggal,
 		Nominal: nominal,
 		Jumlah: jumlah,
 		Catatan: catatan,
 		Bukti_transaksi: linkbukti,
 		Total: total,
 	}
+
+	fmt.Println(newTransaksi)
 
 	if err := config.DB.Create(&newTransaksi).Error; err != nil {
 		return err

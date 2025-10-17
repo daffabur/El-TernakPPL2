@@ -5,7 +5,6 @@ import (
 	services "backend-el-ternak/internal/services/kandang"
 	"backend-el-ternak/utils"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -25,9 +24,7 @@ func CreateKandang(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(data.Kapasitas)
-
-	err := services.CreateKandang(data.Nama, data.Kapasitas, data.IdPenanggungJawab)
+	err := services.CreateKandang(data.Nama, data.Kapasitas)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, "internal server error")
 		return

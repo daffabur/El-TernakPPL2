@@ -14,6 +14,7 @@ type Kandang struct{
 	Sekam int `gorm:"default:0"`
 	Obat int `gorm:"default:0"`
 	Status string `gorm:"default:'active'"`
+	Laporans []Laporan `gorm:"foreignKey:KandangID"`
 }
 
 type KandangSummary struct{

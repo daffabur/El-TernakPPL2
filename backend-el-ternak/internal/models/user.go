@@ -8,6 +8,7 @@ type User struct {
 	Password string `gorm:"not null"`
 	Role string `gorm:"default:pegawai"`
 	IsActive bool `gorm:"column:is_active"`
+	IsPJ bool `gorm:"column:is_pj"`
 	KandangID *uint `gorm:"default:null"`
 	Kandang *Kandang
 }

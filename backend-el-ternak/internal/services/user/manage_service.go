@@ -4,7 +4,6 @@ import (
 	"backend-el-ternak/internal/models"
 	"backend-el-ternak/internal/repository"
 	"errors"
-	"fmt"
 	"log"
 
 	"golang.org/x/crypto/bcrypt"
@@ -12,12 +11,6 @@ import (
 )
 
 func CreateUser(username, password, role string, isActive bool, kandangID *uint) error {
-	if kandangID != nil {
-		fmt.Println("kandang ada IDnya:", kandangID)	
-	} else {
-		fmt.Println("kandang kosong kan bang")
-	}
-
 	var user models.User
 	err := DB.Where("username = ?", username).First(&user).Error
 	
@@ -42,8 +35,6 @@ func CreateUser(username, password, role string, isActive bool, kandangID *uint)
 		IsActive: isActive,
 		KandangID: kandangID,
 	}
-
-	fmt.Println("ini dari service:", newUser)
 
 	return repository.CreateUser(newUser)
 }

@@ -21,7 +21,7 @@ type UserContext struct {
 
 func Register(w http.ResponseWriter, r *http.Request) {
 	var req AuthRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {	
 		utils.RespondError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
