@@ -25,15 +25,15 @@ type KandangSummary struct{
 }
 
 type KandangDetail struct{
-	ID int
-	Nama string 
-	Kapasitas int 
-	Penanggung_jawab string
-	Populasi int
-	Kematian int
-	Konsumsi_pakan int
-	Solar int
-	Sekam int
-	Obat int
-	Status string
+	ID int `json:"id"`
+	Nama string `json:"nama"`
+	Kapasitas int `json:"kapasitas"`
+	Populasi int `json:"populasi"`
+	Kematian int `json:"kematian"`
+	Konsumsi_pakan int `json:"pakan"`
+	Solar int `json:"solar"`
+	Sekam int `json:"sekam"`
+	Obat int `json:"obat"`
+	Status string `json:"status"`
+	Penanggung_jawab []UserSummary `json:"penanggung_jawab"`
 }
