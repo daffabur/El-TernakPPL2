@@ -29,31 +29,6 @@ type CreateTransaksiData struct{
 	Total int
 }
 
-// func CreateTransaksi(w http.ResponseWriter, r *http.Request) {
-// 	var data CreateTransaksiData
-// 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-// 		utils.RespondError(w, http.StatusBadRequest, "invalid request")
-// 		return
-// 	}
-
-// 	parsedDate, err := time.Parse(time.RFC3339, data.Tanggal)
-// 	fmt.Println(parsedDate)
-
-// 	if err != nil {
-// 		utils.RespondError(w, http.StatusBadRequest, "invalid time format")
-// 		return
-// 	}
-
-// 	err = services.CreateTransaksi(data.Nama, data.Jenis, data.Kategori, parsedDate, data.Nominal, data.Jumlah, data.Catatan, data.Bukti_transaksi, data.Total)
-
-// 	if err != nil {
-// 		utils.RespondError(w, http.StatusInternalServerError, "internal server error")
-// 		return
-// 	}
-
-// 	utils.RespondSuccess(w, http.StatusCreated, "berhasil membuat transaksi", nil)
-// }
-
 func CreateTransaksi(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(5 << 20); err != nil {
 		utils.RespondError(w, http.StatusBadRequest, "invalid request: could not parse form")
