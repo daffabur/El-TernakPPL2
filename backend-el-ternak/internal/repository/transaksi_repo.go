@@ -88,6 +88,8 @@ func GetTransaksiByID(id uint) (*models.TransaksiSummary, error) {
 	Where("id = ?", id).
 	First(&transaksi).Error
 
+	fmt.Println(&transaksi)
+
 	if err !=  nil {
 		return nil, err
 	}
