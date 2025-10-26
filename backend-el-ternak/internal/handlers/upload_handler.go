@@ -62,11 +62,13 @@ func UploadImageHandler(w http.ResponseWriter, r *http.Request){
 
 	ext := filepath.Ext(header.Filename)
 	fileName := fmt.Sprintf("%s%s", uuid.NewString(), ext)
+	contentType := header.Header.Get("Content-Type")
 	
 	_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket: &bucketName,
 		Key: &fileName,
 		Body: file,
+		ContentType: &contentType,
 	})
 
 	if err != nil {
