@@ -294,21 +294,18 @@ class _MoneyManagementState extends State<MoneyManagement> {
                           );
                         }
 
-                        // Jika terjadi error
                         if (snapshot.hasError) {
                           return Center(
                             child: Text("Terjadi error: ${snapshot.error}"),
                           );
                         }
 
-                        // Jika data tidak ada atau kosong
                         if (!snapshot.hasData || snapshot.data!.isEmpty) {
                           return const Center(
                             child: Text("Belum ada transaksi."),
                           );
                         }
 
-                        // Jika data berhasil dimuat
                         final transactions = snapshot.data!;
                         return ListView.builder(
                           shrinkWrap: true,
@@ -317,7 +314,7 @@ class _MoneyManagementState extends State<MoneyManagement> {
                           itemCount: transactions.length,
                           itemBuilder: (context, index) {
                             final transaction = transactions[index];
-                            return TransactionItem(transaction: transaction);
+                            return TransactionItem(transaction: transaction, onDataChanged: _loadTransactions);
                           },
                         );
                       },

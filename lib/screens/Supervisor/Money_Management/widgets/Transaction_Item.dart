@@ -5,8 +5,9 @@ import 'package:intl/intl.dart';
 
 class TransactionItem extends StatelessWidget {
   final TransactionModel transaction;
+  final VoidCallback onDataChanged;
 
-  const TransactionItem({super.key, required this.transaction});
+  const TransactionItem({super.key, required this.transaction , required this.onDataChanged,});
 
   IconData _getIconForCategory(String category) {
     switch (category.toLowerCase()) {
@@ -36,7 +37,6 @@ class TransactionItem extends StatelessWidget {
     );
     final String formattedTotal = currencyFormatter.format(transaction.total);
 
-    // Format tanggal
     final String formattedDate = DateFormat(
       'd MMM yyyy',
       'id_ID',
@@ -44,12 +44,18 @@ class TransactionItem extends StatelessWidget {
 
     return GestureDetector(
       onTap: () async {
-        Navigator.push(
+
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => DetailTransaction(transaction: transaction),
           ),
         );
+
+        if (result == true) {
+          onDataChanged();
+          print("Callback diterima, me-refresh daftar transaksi.");
+        }
       },
       child: Card(
         elevation: 0,

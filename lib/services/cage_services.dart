@@ -6,7 +6,7 @@ import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/cage_model.dart';
 
 class CageService {
-  static const String _base = 'http://10.0.2.2:11222/api';
+  static const String _base = 'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api/';
   static const bool _debug = false;
 
   final _auth = AuthService();

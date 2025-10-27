@@ -6,12 +6,9 @@ import 'dart:convert';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/models/user_model.dart';
 
 class ApiService {
-  static const String _baseUrl = 'http://10.0.2.2:11222/api/';
+  static const String _baseUrl = 'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api/';
   final AuthService _authService = AuthService();
 
-  // =========================================================
-  // Helper untuk mendapatkan header otentikasi
-  // =========================================================
   Future<Map<String, String>> _getAuthHeaders() async {
     final token = await _authService.getToken();
     if (token == null) {
@@ -19,13 +16,10 @@ class ApiService {
     }
     return {
       'Content-Type': 'application/json; charset=UTF-8',
-      'Authorization': token, // sesuai pola GET lain di project-mu
+      'Authorization': token,
     };
   }
 
-  // =========================================================
-  // AUTH: Login
-  // =========================================================
   Future<String> login(String username, String password) async {
     final response = await http.post(
       Uri.parse('${_baseUrl}auth/login'),
@@ -53,11 +47,6 @@ class ApiService {
       }
     }
   }
-
-  // =========================================================
-  // MANAGE ACCOUNT: Get all users
-  // GET /manage/
-  // =========================================================
   Future<List<User>> getAllUsers() async {
     try {
       final headers = await _getAuthHeaders();
@@ -107,7 +96,6 @@ class ApiService {
       final data = (body is Map<String, dynamic>) ? body['data'] : body;
 
       if (data is List) {
-        // Pastikan mapping aman meskipun response hanya berisi sebagian field.
         return data
             .whereType<Map<String, dynamic>>()
             .map<User>((j) => User.fromJson(j))
@@ -312,39 +300,62 @@ class ApiService {
     }
 
   // Fungsi untuk membuat transaksi baru
-  Future<void> createTransaction(Map<String, dynamic> transactionData) async {
-    print("Mencoba membuat transaksi dengan data: $transactionData"); // Untuk debugging
+  Future<void> createTransaction(Map<String, dynamic> transactionData, String? imagePath) async {
+    print("Mencoba membuat transaksi dengan data: $transactionData");
+    if (imagePath != null) {
+      print("Dengan path gambar: $imagePath");
+    }
+
     try {
-      final headers = await _getAuthHeaders();
-      final response = await http.post(
-        Uri.parse('${_baseUrl}transaksi/create'), // Endpoint POST untuk membuat transaksi
-        headers: headers,
-        body: jsonEncode(transactionData),
-      );
+      final url = Uri.parse('${_baseUrl}transaksi/create');
+      var request = http.MultipartRequest('POST', url);
 
-      print("Status Code Create Transaction: ${response.statusCode}"); // Untuk debugging
-      print("Response Body: ${response.body}"); // Untuk debugging
+      // Ambil token dari AuthService
+      final token = await _authService.getToken();
+      if (token == null) {
+        throw Exception('Token not found. Please log in again.');
+      }
+      request.headers['Authorization'] = token;
 
-      // API yang baik biasanya mengembalikan 201 (Created) atau 200 (OK)
+      // Tambahkan semua data teks dari Map
+      transactionData.forEach((key, value) {
+        request.fields[key] = value.toString();
+      });
+
+      // Tambahkan file gambar HANYA jika path-nya ada (tidak null)
+      if (imagePath != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'bukti_transaksi', // Nama field ini harus sama dengan yang diharapkan backend
+            imagePath,
+          ),
+        );
+      }
+
+      // Kirim request dan tunggu response
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print("Status Code Create Transaction: ${response.statusCode}");
+      print("Response Body: ${response.body}");
+
+      // Cek jika request tidak berhasil
       if (response.statusCode != 201 && response.statusCode != 200) {
-        // Coba parsing pesan error dari backend
         try {
           final responseBody = jsonDecode(response.body);
           final errorMessage = responseBody['message'] ?? 'Gagal membuat transaksi.';
           throw Exception(errorMessage);
         } catch (_) {
-          // Jika parsing gagal, tampilkan error umum
           throw Exception('Gagal membuat transaksi. Status: ${response.statusCode}');
         }
       }
       print('Transaksi berhasil dibuat: ${response.body}');
     } catch (e) {
-      // Lempar kembali error yang sudah diformat dari _getAuthHeaders atau error lainnya
+      // Lempar kembali error dengan format yang bersih
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
 
-  // Fungsi untuk mengambil total saldo
   Future<SummaryModel> getSummary() async {
     print("===== MEMULAI GET SUMMARY ====="); // Untuk debugging
     try {
