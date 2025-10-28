@@ -19,4 +19,5 @@ type UserSummary struct {
 	Role string `json:"role"`
 	IsActive bool `json:"is_active"`
 	IsPj bool `json:"is_pj"`
+	KandangID int `json:"kandang_id"`
 }

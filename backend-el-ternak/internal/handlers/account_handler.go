@@ -13,6 +13,10 @@ type UserProfile struct {
 	Role string
 }
 
+func Me(w http.ResponseWriter, r *http.Request) {
+	
+}
+
 func Profile(w http.ResponseWriter, r *http.Request){
 	userCtx, ok := r.Context().Value("user").(middleware.UserContext)
 	if !ok {

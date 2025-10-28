@@ -12,7 +12,7 @@ func AccountRoutes(r *mux.Router)  {
 	account := r.PathPrefix("/account").Subrouter()
 	
 	// {/profile} -> get currently login users data
-	account.Handle("/profile", middleware.JwtMiddleware(
+	account.Handle("/me", middleware.JwtMiddleware(
 		http.HandlerFunc(handlers.Profile),
 	)).Methods("GET")
 

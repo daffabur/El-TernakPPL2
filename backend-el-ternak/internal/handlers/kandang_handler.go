@@ -14,7 +14,7 @@ import (
 type CreateKandangData struct {
 	Nama string
 	Kapasitas int
-	IdPenanggungJawab []uint
+	IdPenanggungJawab uint
 }
 
 func CreateKandang(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +24,7 @@ func CreateKandang(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := services.CreateKandang(data.Nama, data.Kapasitas)
+	err := services.CreateKandang(data.Nama, data.Kapasitas, data.IdPenanggungJawab)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, "internal server error")
 		return

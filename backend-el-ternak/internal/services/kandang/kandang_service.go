@@ -1,25 +1,19 @@
 package services
 
 import (
-	"backend-el-ternak/internal/config"
 	"backend-el-ternak/internal/models"
 	"backend-el-ternak/internal/repository"
 )
 
-func CreateKandang(nama string, kapasitas int) error {
-	var penanggungJawab []models.User
-
-	if err := config.DB.Find(&penanggungJawab).Error; err != nil {
-		return err
-	}
-
+func CreateKandang(nama string, kapasitas int, id_pj uint) error {
 	newKandang := models.Kandang{
 		Nama: nama,
 		Kapasitas: kapasitas,
-		Penanggung_jawab: penanggungJawab,
 	}
 
-	if err := config.DB.Create(&newKandang).Error; err != nil {
+	err := repository.CreateKandang(&newKandang, id_pj)
+	
+	if err != nil {
 		return err
 	}
 
