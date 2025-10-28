@@ -9,8 +9,29 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateKandang(kandang *models.Kandang) error {
-	return config.DB.Create(kandang).Error
+func CreateKandang(kandang *models.Kandang, pj_id uint) error {
+	tx := config.DB.Begin()
+	if err := tx.Create(kandang).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Model(&models.User{}).
+	Where("id = ?", pj_id).
+	Updates(map[string]interface{}{
+		"kandang_id" : kandang.ID,
+		"is_pj":  true,
+	}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return nil
 }
 
 func GetAllKandang() ([]models.KandangSummary, error){

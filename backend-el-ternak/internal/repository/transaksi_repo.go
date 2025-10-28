@@ -9,7 +9,35 @@ import (
 )
 
 func CreateTransaksi(transaksi *models.Transaksi) error {
-	return config.DB.Create(transaksi).Error
+	tx := config.DB.Begin()
+
+	err := tx.Create(transaksi).Error
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	var storage models.Storage
+	item := transaksi.Kategori
+	switch item {
+	case "pakan":
+		storage.Pakan_stock += transaksi.Jumlah
+	case "solar":
+		storage.Solar_stock += transaksi.Jumlah
+	case "obat":
+		storage.Obat_stock += transaksi.Jumlah
+	case "sekam":
+		storage.Sekam_stock += transaksi.Jumlah
+	default:
+		return nil
+	}
+
+	if err := tx.Save(storage).Error; err != nil {
+		tx.Rollback()
+		return nil
+	}
+
+	return tx.Commit().Error
 }
 
 func GetAllTransaksi() ([]models.TransaksiForAll, error) {

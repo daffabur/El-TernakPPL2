@@ -35,6 +35,7 @@ func ConnectDB() {
 		&models.Transaksi{},
 		&models.User{},
 		&models.Kandang{},
+		&models.Storage{},
 	)
 
 	if err != nil {
