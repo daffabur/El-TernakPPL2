@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"backend-el-ternak/internal/repository"
-	services "backend-el-ternak/internal/services/transaksi"
+	"backend-el-ternak/internal/services"
 	"backend-el-ternak/utils"
 	"context"
 	"fmt"
