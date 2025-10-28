@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func CreateTransaksi(transaksi *models.Transaksi) error {
+func CreateTransaksi(transaksi *models.Transaksi, kategori *string) error {
 	tx := config.DB.Begin()
 
 	err := tx.Create(transaksi).Error
@@ -17,26 +17,30 @@ func CreateTransaksi(transaksi *models.Transaksi) error {
 		return err
 	}
 
-	var storage models.Storage
-	item := transaksi.Kategori
-	switch item {
-	case "pakan":
-		storage.Pakan_stock += transaksi.Jumlah
-	case "solar":
-		storage.Solar_stock += transaksi.Jumlah
-	case "obat":
-		storage.Obat_stock += transaksi.Jumlah
-	case "sekam":
-		storage.Sekam_stock += transaksi.Jumlah
-	default:
-		return nil
-	}
+	if kategori != nil {
+		var storage models.Storage
 
-	if err := tx.Save(storage).Error; err != nil {
-		tx.Rollback()
-		return nil
-	}
+		if err := tx.First(&storage).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
 
+		switch transaksi.Kategori {
+		case "pakan":
+			storage.Pakan_stock += transaksi.Jumlah
+		case "solar":
+			storage.Solar_stock += transaksi.Jumlah
+		case "obat":
+			storage.Obat_stock += transaksi.Jumlah
+		case "sekam":
+			storage.Sekam_stock += transaksi.Jumlah
+		}
+
+		if err := tx.Save(storage).Error; err != nil {
+			tx.Rollback()
+			return nil
+		}
+	}
 	return tx.Commit().Error
 }
 

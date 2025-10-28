@@ -16,7 +16,7 @@ func CreateLaporan(laporan *models.Laporan) error {
 	}
 
 	var storage models.Storage
-	if err := tx.First(storage).Error; err != nil {
+	if err := tx.First(&storage, 1).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
