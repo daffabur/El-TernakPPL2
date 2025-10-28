@@ -72,11 +72,6 @@ class ApiService {
     }
   }
 
-  // =========================================================
-  // MANAGE ACCOUNT: Get pegawai only
-  // GET /manage/pegawai
-  // (dipakai utk dropdown Penanggung Jawab)
-  // =========================================================
   Future<List<User>> getPegawaiOnly() async {
     try {
       final headers = await _getAuthHeaders();
@@ -107,20 +102,15 @@ class ApiService {
     }
   }
 
-  // Opsional: hanya pegawai aktif (kalau model User punya isActive/is_active)
   Future<List<User>> getActivePegawaiOnly() async {
     final list = await getPegawaiOnly();
-    // Sesuaikan properti boolean aktif di model User kamu
+
     return list.where((u) {
       final v = (u.isActive ?? u.isActive ?? true);
       return v == true;
     }).toList();
   }
 
-  // =========================================================
-  // MANAGE ACCOUNT: Create user
-  // POST /manage/create
-  // =========================================================
   Future<void> createUser(Map<String, dynamic> userData) async {
     try {
       final headers = await _getAuthHeaders();
@@ -173,16 +163,12 @@ class ApiService {
           );
         }
       }
-      // print('User "$originalUsername" berhasil diperbarui: ${response.body}');
+
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
 
-  // =========================================================
-  // MANAGE ACCOUNT: Delete user
-  // DELETE /manage/delete (body: { username })
-  // =========================================================
   Future<void> deleteUser(String username) async {
     try {
       final url = Uri.parse('${_baseUrl}manage/delete');
@@ -205,19 +191,17 @@ class ApiService {
           throw Exception('Gagal menghapus. Status: ${response.statusCode}');
         }
       }
-      // print('User "$username" berhasil dihapus.');
     } catch (e) {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
 
-  // Fungsi untuk mengambil seluruh transaksi
   Future<List<TransactionModel>> getAllTransactions() async {
     try {
       final headers = await _getAuthHeaders();
       final response = await http.get(
         Uri.parse('${_baseUrl}transaksi/'),
-        headers: headers, // Gunakan helper header yang sama
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -235,11 +219,8 @@ class ApiService {
     }
   }
 
-  // Fungsi untuk mengambil transaksi berdasarkan periode
   Future<List<TransactionModel>> getFilteredTransactions(String periode) async {
-    // Validasi untuk memastikan periode tidak kosong
     if (periode.isEmpty) {
-      // Jika periode kosong, kembalikan daftar kosong atau panggil getAllTransactions
       return getAllTransactions();
     }
 
@@ -252,7 +233,7 @@ class ApiService {
         headers: await _getAuthHeaders(),
       );
 
-      print("Status Code Filter: ${response.statusCode}"); // Untuk debugging
+      print("Status Code Filter: ${response.statusCode}");
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);

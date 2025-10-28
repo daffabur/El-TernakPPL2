@@ -4,6 +4,7 @@ import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/account_man
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/cage_management.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Home_Screen/home_screen.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/money_management.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/storage_management.dart';
 import 'package:flutter/material.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/fluent_mdl2.dart';
@@ -28,7 +29,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
     HomeScreen(key: PageStorageKey('home_screen')),
     MoneyManagement(key: PageStorageKey('money_screen')),
     CageManagement(key: PageStorageKey('cage_screen')),
-    Center(key: PageStorageKey('chicken_screen'), child: Text("Chicken")),
+    StorageManagement(key: PageStorageKey('storage_management')),
     AccountManagement(key: PageStorageKey('account_screen')),
   ];
 
@@ -133,7 +134,7 @@ class BottomBarOnly extends StatelessWidget {
           _buildNavItem(
             context,
             MaterialSymbols.warehouse_rounded,
-            "Chicken",
+            "Storage",
             3,
             sel,
             unsel,
