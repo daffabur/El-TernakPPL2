@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"backend-el-ternak/internal/repository"
-	services "backend-el-ternak/internal/services/kandang"
+	"backend-el-ternak/internal/services"
 	"backend-el-ternak/utils"
 	"encoding/json"
 	"net/http"

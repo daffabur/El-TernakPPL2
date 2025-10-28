@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	services "backend-el-ternak/internal/services/laporan"
+	"backend-el-ternak/internal/services"
 	"backend-el-ternak/utils"
 	"encoding/json"
 	"net/http"
