@@ -25,7 +25,7 @@ func GetUserByUsername(username string) (*models.User, error) {
 func GetUserById(id int) (*models.UserSummary, error) {
 	var user models.UserSummary
 	err := config.DB.Model(&models.User{}).
-	Select("id", "username", "role").
+	Select("id", "username", "role", "is_active", "is_pj", "kandang_id").
 	Where("id = ?", id).
 	First(&user).Error
 

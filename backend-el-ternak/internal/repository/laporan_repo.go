@@ -9,7 +9,31 @@ import (
 
 
 func CreateLaporan(laporan *models.Laporan) error {
-	return config.DB.Create(laporan).Error
+	tx := config.DB.Begin()
+	if err := tx.Create(laporan).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	var storage models.Storage
+	if err := tx.First(&storage, 1).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	fmt.Println(storage)
+
+	storage.Pakan_used += laporan.Pakan_used
+	storage.Sekam_used += laporan.Sekam_used
+	storage.Solar_used += laporan.Solar_used
+	storage.Obat_used += laporan.Obat_used
+
+	if err := tx.Save(storage).Error; err != nil {
+		tx.Rollback()
+		return nil
+	}
+
+	return tx.Commit().Error
 }
 
 func GetLaporan(kandang_id *uint) ([]models.LaporanSummary, error) {

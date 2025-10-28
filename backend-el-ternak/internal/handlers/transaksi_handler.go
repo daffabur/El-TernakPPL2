@@ -2,14 +2,18 @@ package handlers
 
 import (
 	"backend-el-ternak/internal/repository"
-	services "backend-el-ternak/internal/services/transaksi"
+	"backend-el-ternak/internal/services"
 	"backend-el-ternak/utils"
-	"encoding/json"
+	"context"
 	"fmt"
+	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
@@ -26,28 +30,94 @@ type CreateTransaksiData struct{
 }
 
 func CreateTransaksi(w http.ResponseWriter, r *http.Request) {
-	var data CreateTransaksiData
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		utils.RespondError(w, http.StatusBadRequest, "invalid request")
+	if err := r.ParseMultipartForm(5 << 20); err != nil {
+		utils.RespondError(w, http.StatusBadRequest, "invalid request: could not parse form")
 		return
 	}
 
-	parsedDate, err := time.Parse(time.RFC3339, data.Tanggal)
-	fmt.Println(parsedDate)
+	file, header, err := r.FormFile("bukti_transaksi")
+	var buktiTransaksiURL string = "" 
+
+	if err == nil {
+		defer file.Close()
+
+		ext := filepath.Ext(header.Filename)
+		fileName := fmt.Sprintf("%s%s", uuid.NewString(), ext)
+		contentType := header.Header.Get("Content-Type")
+		_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+			Bucket:      &bucketName,
+			Key:         &fileName,
+			Body:        file,
+			ContentType: &contentType,
+		})
+
+		if err != nil {
+			log.Printf("Failed to upload to S3: %v", err)
+			utils.RespondError(w, http.StatusInternalServerError, "failed to upload file")
+			return
+		}
+
+		buktiTransaksiURL = fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", bucketName, awsRegion, fileName)
+	} else if err != http.ErrMissingFile {
+		utils.RespondError(w, http.StatusBadRequest, "invalid file upload: "+err.Error())
+		return
+	}
+
+	nama := r.FormValue("nama")
+	jenis := r.FormValue("jenis")
+	kategori := r.FormValue("kategori")
+	tanggalStr := r.FormValue("tanggal")
+	nominalStr := r.FormValue("nominal")
+	jumlahStr := r.FormValue("jumlah")
+	catatan := r.FormValue("catatan")
+	totalStr := r.FormValue("total")
+
+	parsedDate, err := time.Parse(time.RFC3339, tanggalStr)
+	if err != nil {
+		utils.RespondError(w, http.StatusBadRequest, "invalid time format, must be RFC3339: "+tanggalStr)
+		return
+	}
+
+	nominal, err := strconv.Atoi(nominalStr)
+	if err != nil {
+		utils.RespondError(w, http.StatusBadRequest, "invalid format for Nominal")
+		return
+	}
+
+	jumlah, err := strconv.Atoi(jumlahStr)
+	if err != nil {
+		utils.RespondError(w, http.StatusBadRequest, "invalid format for Jumlah")
+		return
+	}
+
+	total, err := strconv.Atoi(totalStr)
+	if err != nil {
+		utils.RespondError(w, http.StatusBadRequest, "invalid format for Total")
+		return
+	}
+
+	err = services.CreateTransaksi(
+		nama,
+		jenis,
+		kategori,
+		parsedDate,
+		nominal,
+		jumlah,
+		catatan,
+		buktiTransaksiURL,
+		total,
+	)
 
 	if err != nil {
-		utils.RespondError(w, http.StatusBadRequest, "invalid time format")
+		utils.RespondError(w, http.StatusInternalServerError, "internal server error: "+err.Error())
 		return
 	}
 
-	err = services.CreateTransaksi(data.Nama, data.Jenis, data.Kategori, parsedDate, data.Nominal, data.Jumlah, data.Catatan, data.Bukti_transaksi, data.Total)
-
-	if err != nil {
-		utils.RespondError(w, http.StatusInternalServerError, "internal server error")
-		return
+	responseData := map[string]interface{}{
+	"bukti_transaksi_url": buktiTransaksiURL,
 	}
 
-	utils.RespondSuccess(w, http.StatusCreated, "berhasil membuat transaksi", nil)
+	utils.RespondSuccess(w, http.StatusCreated, "berhasil membuat transaksi", responseData)
 }
 
 func GetAllTransaksi(w http.ResponseWriter, r *http.Request){

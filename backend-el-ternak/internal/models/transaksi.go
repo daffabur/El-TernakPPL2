@@ -26,7 +26,7 @@ type TransaksiSummary struct{
 	Jenis string
 	Kategori string
 	Catatan string
-	Bukti string
+	Bukti_transaksi string
 	Total int
 }
 

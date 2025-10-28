@@ -1,10 +1,8 @@
 package services
 
 import (
-	"backend-el-ternak/internal/config"
 	"backend-el-ternak/internal/models"
 	"backend-el-ternak/internal/repository"
-	"fmt"
 	"time"
 )
 
@@ -21,9 +19,14 @@ func CreateTransaksi(nama, jenis, kategori string, tanggal time.Time, nominal in
 		Total: total,
 	}
 
-	fmt.Println(newTransaksi)
+	var kategoriPtr *string
 
-	if err := config.DB.Create(&newTransaksi).Error; err != nil {
+	if newTransaksi.Jenis == "pengeluaran" && (newTransaksi.Kategori == "pakan" || newTransaksi.Kategori == "obat" || newTransaksi.Kategori == "sekam" || newTransaksi.Kategori == "solar") {
+		kategoriPtr = &newTransaksi.Kategori
+	}
+
+	err := repository.CreateTransaksi(&newTransaksi, kategoriPtr)
+	if err != nil {
 		return err
 	}
 

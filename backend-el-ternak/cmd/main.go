@@ -3,6 +3,7 @@ package main
 import (
 	"backend-el-ternak/initializers"
 	"backend-el-ternak/internal/config"
+	"backend-el-ternak/internal/handlers"
 	"backend-el-ternak/internal/routes"
 	"backend-el-ternak/internal/services/user"
 	"log"
@@ -14,7 +15,7 @@ import (
 func init()  {
 	initializers.LoadEnvVariables()
 	initializers.ConnectDB()
-	initializers.SyncDatabase()
+	handlers.InitS3()
 }
 
 func main()  {

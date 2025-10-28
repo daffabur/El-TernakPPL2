@@ -8,8 +8,40 @@ import (
 	"time"
 )
 
-func CreateTransaksi(transaksi *models.Transaksi) error {
-	return config.DB.Create(transaksi).Error
+func CreateTransaksi(transaksi *models.Transaksi, kategori *string) error {
+	tx := config.DB.Begin()
+
+	err := tx.Create(transaksi).Error
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if kategori != nil {
+		var storage models.Storage
+
+		if err := tx.First(&storage).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		switch transaksi.Kategori {
+		case "pakan":
+			storage.Pakan_stock += transaksi.Jumlah
+		case "solar":
+			storage.Solar_stock += transaksi.Jumlah
+		case "obat":
+			storage.Obat_stock += transaksi.Jumlah
+		case "sekam":
+			storage.Sekam_stock += transaksi.Jumlah
+		}
+
+		if err := tx.Save(storage).Error; err != nil {
+			tx.Rollback()
+			return nil
+		}
+	}
+	return tx.Commit().Error
 }
 
 func GetAllTransaksi() ([]models.TransaksiForAll, error) {
@@ -87,6 +119,8 @@ func GetTransaksiByID(id uint) (*models.TransaksiSummary, error) {
 	Select("id", "tanggal", "nama", "jenis", "kategori", "catatan", "bukti_transaksi", "total").
 	Where("id = ?", id).
 	First(&transaksi).Error
+
+	fmt.Println(&transaksi)
 
 	if err !=  nil {
 		return nil, err

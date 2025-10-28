@@ -6,5 +6,5 @@ import (
 )
 
 func WelcomeMsg(w http.ResponseWriter, r *http.Request)  {
-	utils.RespondSuccess(w, http.StatusOK, "Hi from El-Ternak backend!", nil)
+	utils.RespondSuccess(w, http.StatusOK, "Hi from El-Ternak backend baru!", nil)
 }
