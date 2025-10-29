@@ -7,7 +7,6 @@ import (
 	"fmt"
 )
 
-
 func CreateLaporan(laporan *models.Laporan) error {
 	tx := config.DB.Begin()
 	if err := tx.Create(laporan).Error; err != nil {
@@ -15,13 +14,12 @@ func CreateLaporan(laporan *models.Laporan) error {
 		return err
 	}
 
+	//update tabel storage
 	var storage models.Storage
 	if err := tx.First(&storage, 1).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
-
-	fmt.Println(storage)
 
 	storage.Pakan_used += laporan.Pakan_used
 	storage.Sekam_used += laporan.Sekam_used
@@ -31,6 +29,26 @@ func CreateLaporan(laporan *models.Laporan) error {
 	if err := tx.Save(storage).Error; err != nil {
 		tx.Rollback()
 		return nil
+	}
+
+	//update tabel kandang
+	var kandang models.Kandang
+	err := tx.First(&kandang, laporan.KandangID).Error;
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	kandang.Kematian += laporan.Kematian_ayam
+	kandang.Populasi -= laporan.Kematian_ayam
+	kandang.Konsumsi_pakan += laporan.Pakan_used
+	kandang.Solar += laporan.Solar_used
+	kandang.Sekam += laporan.Sekam_used
+	kandang.Obat += laporan.Obat_used
+
+	if err := tx.Save(kandang).Error; err != nil {
+		tx.Rollback()
+		return err
 	}
 
 	return tx.Commit().Error
