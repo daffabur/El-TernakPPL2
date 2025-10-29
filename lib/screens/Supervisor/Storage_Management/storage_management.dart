@@ -4,7 +4,6 @@ import 'package:el_ternak_ppl2/services/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:intl/intl.dart';
 
 class StorageManagement extends StatefulWidget {
   const StorageManagement({super.key});
@@ -20,7 +19,6 @@ class _StorageManagementState extends State<StorageManagement> {
   @override
   void initState() {
     super.initState();
-    // Inisialisasi locale untuk format tanggal Indonesia
     initializeDateFormatting('id_ID', null);
     _loadStorageData();
   }
@@ -59,7 +57,6 @@ class _StorageManagementState extends State<StorageManagement> {
               ),
               const SizedBox(height: 24),
 
-              // === List Item Penyimpanan ===
               Expanded(
                 child: FutureBuilder<Storage>(
                   future: _storageFuture,
@@ -87,29 +84,29 @@ class _StorageManagementState extends State<StorageManagement> {
                     final List<Map<String, dynamic>> dynamicStorageItems = [
                       {
                         "name": "Pakan",
-                        "current": storage.pakanStock,
-                        "total": storage.pakanStock + storage.pakanUsed,
+                        "used": storage.pakanUsed,
+                        "total": storage.pakanStock ,
                         "icon": Icons.grass,
                         "unit": "Kg"
                       },
                       {
                         "name": "Solar",
-                        "current": storage.solarStock,
-                        "total": storage.solarStock + storage.solarUsed,
+                        "used": storage.solarUsed,
+                        "total": storage.solarStock ,
                         "icon": Icons.local_gas_station,
                         "unit": "L"
                       },
                       {
                         "name": "Sekam",
-                        "current": storage.sekamStock,
-                        "total": storage.sekamStock + storage.sekamUsed,
+                        "used": storage.sekamUsed,
+                        "total": storage.sekamStock,
                         "icon": Icons.layers,
                         "unit": "Kg"
                       },
                       {
                         "name": "Obat",
-                        "current": storage.obatStock,
-                        "total": storage.obatStock + storage.obatUsed,
+                        "used": storage.obatUsed,
+                        "total": storage.obatStock ,
                         "icon": Icons.medical_services,
                         "unit": "L"
                       }
@@ -124,7 +121,7 @@ class _StorageManagementState extends State<StorageManagement> {
 
                           // Hindari pembagian dengan nol jika totalnya 0
                           final double progress = (item['total'] > 0)
-                              ? (item['current'] / item['total'].toDouble())
+                              ? (item['used'] / item['total'].toDouble())
                               : 0.0;
 
                           // Tampilkan UI Card Anda dengan data dinamis
@@ -159,7 +156,7 @@ class _StorageManagementState extends State<StorageManagement> {
                                     const SizedBox(height: 12),
                                     Text(
                                       // Gunakan unit yang sudah kita definisikan
-                                      "${item['current']} ${item['unit']} / ${item['total']} ${item['unit']}",
+                                      "${item['used']} ${item['unit']} / ${item['total']} ${item['unit']}",
                                       style: GoogleFonts.poppins(
                                         color: Colors.white,
                                         fontSize: 12,
