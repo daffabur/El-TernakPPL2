@@ -6,28 +6,47 @@ import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/cage_model.dart';
 
 class CageService {
-  static const String _base = 'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api';
-  static const bool _debug = false;
+  // Base URL Postman kamu (port 80 + /api)
+  static const String _base =
+      'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api';
+
+  static const bool _debug = true;
+  static const Duration _timeout = Duration(seconds: 20);
 
   final _auth = AuthService();
 
   // ================= Helpers =================
+
   Future<Map<String, String>> _headers() async {
     final token = await _auth.getToken();
-    if (token == null) {
+    if (token == null || token.isEmpty) {
       throw Exception('Token tidak ditemukan. Silakan login ulang.');
     }
-    final bearer = token.startsWith('Bearer ') ? token : 'Bearer $token';
+
+    // Di environment kamu: Authorization = token mentah (tanpa "Bearer ").
+    final authValue = token.startsWith('Bearer ') ? token : token;
+
     return {
       'Content-Type': 'application/json; charset=UTF-8',
-      'Authorization': bearer,
+      'Authorization': authValue,
     };
   }
 
-  int _toInt(dynamic v, {int fallback = 0}) =>
-      v is int ? v : (int.tryParse('${v ?? ''}') ?? fallback);
-
-  Uri _u(String p) => Uri.parse('$_base$p');
+  Uri _u(String p, [Map<String, dynamic>? q]) {
+    final base = _base.endsWith('/')
+        ? _base.substring(0, _base.length - 1)
+        : _base;
+    final path = p.startsWith('/') ? p : '/$p';
+    final uri = Uri.parse('$base$path');
+    return (q == null || q.isEmpty)
+        ? uri
+        : uri.replace(
+            queryParameters: {
+              ...uri.queryParameters,
+              ...q.map((k, v) => MapEntry(k, '$v')),
+            },
+          );
+  }
 
   dynamic _safeDecode(String s) {
     try {
@@ -37,15 +56,31 @@ class CageService {
     }
   }
 
+  void _log(String msg) {
+    if (_debug) print('[CageService] $msg');
+  }
+
+  Never _throwHttp(String where, http.Response r) {
+    final body = r.body.isEmpty ? '<empty>' : r.body;
+    throw Exception('[$where] HTTP ${r.statusCode} $body');
+  }
+
   List<Cage> _parseList(dynamic body) {
+    if (body == null) return const <Cage>[];
     final data = (body is Map<String, dynamic>) ? body['data'] : body;
     if (data is List) {
-      return data.map((e) => Cage.fromJson(e as Map<String, dynamic>)).toList();
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map((e) => Cage.fromJson(e))
+          .toList();
     }
-    return <Cage>[];
+    return const <Cage>[];
   }
 
   Cage _parseDetail(dynamic body) {
+    if (body == null) {
+      throw Exception('Respon kosong dari server.');
+    }
     final data = (body is Map<String, dynamic>) ? body['data'] : null;
     if (data is Map<String, dynamic>) return Cage.fromJson(data);
     throw Exception('Format detail kandang tidak dikenali.');
@@ -60,84 +95,80 @@ class CageService {
   String _deleteAlt(int id) => '/kandang/delete/$id';
 
   Future<List<Cage>> getAll() async {
-    // coba A
-    var r = await http.get(_u(_listAdminA), headers: await _headers());
-    if (_debug) print('[CAGE LIST ADMIN A] ${r.statusCode}');
-    // fallback B kalau 404/301/308 (path mismatch) atau 500 aneh
+    final r = await http
+        .get(_u('kandang'), headers: await _headers())
+        .timeout(_timeout);
+    _log('GET /kandang -> ${r.statusCode}');
     if (r.statusCode != 200) {
-      r = await http.get(_u(_listAdminB), headers: await _headers());
-      if (_debug) print('[CAGE LIST ADMIN B] ${r.statusCode}');
-    }
-    if (r.statusCode != 200) {
-      throw Exception('Gagal memuat kandang (status ${r.statusCode}).');
+      _throwHttp('GET /kandang', r);
     }
     return _parseList(_safeDecode(r.body));
   }
 
+  /// Pegawai – ambil 1 kandang yang jadi tanggung jawabnya.
+  /// Mengembalikan list berisi 1 item (atau kosong bila pegawai belum punya kandang).
   Future<List<Cage>> getForEmployee() async {
-    final rawToken = await _auth.getToken();
-    if (rawToken == null) {
-      throw Exception('Token tidak ditemukan. Silakan login ulang.');
-    }
-    final bearer = rawToken.startsWith('Bearer ')
-        ? rawToken
-        : 'Bearer $rawToken';
-
-    final candidates = <String>[
-      '/kandang/pegawai',
-      '/kandang/pegawai/', // kalau BE pakai trailing slash
-      '/kandang/mine',
-      '/kandang/mine/',
-      '/kandang/user',
-      '/kandang/user/',
-      '/kandang/', // fallback: list umum dengan trailing slash
-      '/kandang', // fallback: tanpa trailing slash
-    ];
-
-    Future<http.Response> _hit(String path, String auth) {
-      if (_debug) {
-        print(
-          '[EMP LIST] hit $path with ${auth.startsWith("Bearer ") ? "Bearer" : "raw"}',
-        );
+    try {
+      // 1) Profile untuk ambil kandang_id
+      final prof = await http
+          .get(_u('account/me'), headers: await _headers())
+          .timeout(_timeout);
+      _log('GET /account/me -> ${prof.statusCode}');
+      if (prof.statusCode != 200) {
+        _throwHttp('GET /account/me', prof);
       }
-      return http.get(
-        _u(path),
-        headers: {
-          'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': auth,
-        },
-      );
-    }
 
-    http.Response? last;
-    for (final path in candidates) {
-      // 1) Bearer
-      var r = await _hit(path, bearer);
-      last = r;
-      if (r.statusCode == 200) return _parseList(_safeDecode(r.body));
+      final body = _safeDecode(prof.body);
+      final data = (body is Map<String, dynamic>) ? body['data'] : null;
+      final dynamic kandangIdDyn = (data is Map<String, dynamic>)
+          ? data['kandang_id']
+          : null;
 
-      // 2) Raw (hanya kalau unauthorized/forbidden)
-      if (r.statusCode == 401 || r.statusCode == 403) {
-        r = await _hit(path, rawToken);
-        last = r;
-        if (r.statusCode == 200) return _parseList(_safeDecode(r.body));
+      if (kandangIdDyn == null) {
+        _log('Pegawai tidak memiliki kandang.');
+        return const <Cage>[];
       }
-      // lanjut ke kandidat berikutnya jika 404 / 5xx dll
-    }
 
-    throw Exception('Gagal memuat kandang (status ${last?.statusCode}).');
+      final int kandangId = (kandangIdDyn is int)
+          ? kandangIdDyn
+          : int.tryParse(kandangIdDyn.toString()) ?? -1;
+
+      if (kandangId <= 0) {
+        _log('kandang_id tidak valid: $kandangIdDyn');
+        return const <Cage>[];
+      }
+
+      // 2) Ambil detail kandang sesuai kandang_id
+      final r = await http
+          .get(_u('kandang/$kandangId'), headers: await _headers())
+          .timeout(_timeout);
+      _log('GET /kandang/$kandangId -> ${r.statusCode}');
+      if (r.statusCode != 200) {
+        _throwHttp('GET /kandang/$kandangId', r);
+      }
+
+      final cage = _parseDetail(_safeDecode(r.body));
+      return <Cage>[cage];
+    } catch (e) {
+      _log('Error getForEmployee: $e');
+      return const <Cage>[]; // jangan lempar error ke UI pegawai
+    }
   }
 
+  /// Detail kandang by id
   Future<Cage> getById(int id) async {
-    final r = await http.get(_u(_detail(id)), headers: await _headers());
-    if (_debug) print('[CAGE DETAIL] ${r.statusCode}');
+    final r = await http
+        .get(_u('kandang/$id'), headers: await _headers())
+        .timeout(_timeout);
+    _log('GET /kandang/$id -> ${r.statusCode}');
     if (r.statusCode != 200) {
-      throw Exception('Gagal memuat detail kandang (status ${r.statusCode}).');
+      _throwHttp('GET /kandang/$id', r);
     }
     return _parseDetail(_safeDecode(r.body));
   }
 
   // ================= CREATE =================
+
 // lib/services/cage_services.dart
 
   // ================= CREATE (SUDAH DIPERBAIKI) =================
@@ -180,12 +211,10 @@ class CageService {
       if (ui['status'] != null) 'status': ui['status'].toString().toLowerCase(),
     };
 
-    final r = await http.post(
-      _u(_create),
-      headers: await _headers(),
-      body: jsonEncode(body),
-    );
-    if (_debug) print('[CAGE CREATE] ${r.statusCode} ${r.body}');
+    final r = await http
+        .post(_u('kandang'), headers: await _headers(), body: jsonEncode(body))
+        .timeout(_timeout);
+    _log('POST /kandang -> ${r.statusCode} ${r.body}');
 
     if (r.statusCode != 201 && r.statusCode != 200) {
       final m = (_safeDecode(r.body) as Map?)?['message']?.toString();
@@ -199,11 +228,11 @@ class CageService {
     return Cage(
       id: DateTime.now().millisecondsSinceEpoch, // ID sementara
       name: (body['nama'] as String?) ?? '',
-      capacity: body['kapasitas'] as int? ?? 0,
+      capacity: (body['kapasitas'] as int?) ?? 0,
       population: 0,
       deaths: 0,
       pic: null,
-      status: (ui['status']?.toString() ?? 'active'),
+      status: 'active',
       notes: null,
       pakan: 0,
       solar: 0,
@@ -213,73 +242,269 @@ class CageService {
     // --- AKHIR BLOK YANG DIPINDAHKAN ---
   }
 
-
-  // ================= UPDATE =================
-  Future<void> updateById(int id, Map<String, dynamic> ui) async {
-    final nama = (ui['nama'] ?? ui['name'] ?? ui['Nama'])?.toString();
-    final kapasitas = _toInt(ui['kapasitas'] ?? ui['capacity']);
-    if (nama == null || nama.trim().isEmpty) {
-      throw Exception('Nama tidak boleh kosong saat update.');
+  /// ================ CREATE DAILY REPORT (laporan) ================
+  /// Field kompatibel dengan BE baru:
+  ///   FE-style: kematian_ayam, rata_bobot_ayam, pakan_used, solar_used, sekam_used, obat_used
+  ///   BE-alt  : mati, bobot, pakan, solar, sekam, obat
+  Future<void> createLaporan({
+    required int kandangId,
+    required int kematianAyam,
+    num? rataBobotAyam,
+    required num pakanUsed,
+    required num solarUsed,
+    required num sekamUsed,
+    required num obatUsed,
+  }) async {
+    // Ambil id user (created_by) dari /account/me
+    final me = await http
+        .get(_u('account/me'), headers: await _headers())
+        .timeout(_timeout);
+    _log('GET /account/me -> ${me.statusCode}');
+    if (me.statusCode != 200) {
+      _throwHttp('GET /account/me', me);
+    }
+    final meJson = _safeDecode(me.body);
+    final meData = (meJson is Map<String, dynamic>) ? meJson['data'] : null;
+    final createdBy = (meData is Map<String, dynamic>) ? meData['id'] : null;
+    if (createdBy == null) {
+      throw Exception('Profil tidak berisi id user (created_by).');
     }
 
-    int? idPj = ui['id_pj_kandang'] as int?;
-    idPj ??=
-        (ui['idPenanggungJawab'] is List &&
-            (ui['idPenanggungJawab'] as List).isNotEmpty)
-        ? _toInt((ui['idPenanggungJawab'] as List).first)
-        : null;
+    final payload = <String, dynamic>{
+      "created_by": createdBy,
+      "kandang_id": kandangId,
 
-    final body = <String, dynamic>{
-      'nama': nama,
-      'kapasitas': kapasitas,
-      'populasi': _toInt(ui['populasi'] ?? ui['population'], fallback: 0),
-      'kematian': _toInt(ui['kematian'] ?? ui['deaths'], fallback: 0),
-      'konsumsi_pakan': _toInt(ui['konsumsi_pakan'], fallback: 0),
-      'solar': _toInt(ui['solar'], fallback: 0),
-      'sekam': _toInt(ui['sekam'], fallback: 0),
-      'obat': _toInt(ui['obat'], fallback: 0),
-      if (ui['status'] != null) 'status': ui['status'].toString().toLowerCase(),
-      if (idPj != null) 'id_pj_kandang': idPj,
+      // FE-style
+      "rata_bobot_ayam": rataBobotAyam ?? 0,
+      "kematian_ayam": kematianAyam,
+      "pakan_used": pakanUsed,
+      "solar_used": solarUsed,
+      "sekam_used": sekamUsed,
+      "obat_used": obatUsed,
+
+      // BE-alt (compat)
+      "bobot": rataBobotAyam ?? 0,
+      "mati": kematianAyam,
+      "pakan": pakanUsed,
+      "solar": solarUsed,
+      "sekam": sekamUsed,
+      "obat": obatUsed,
     };
 
-    if (_debug) print('[CAGE UPDATE BODY] $body');
+    final r = await http
+        .post(
+          // Jika BE kamu pakai /laporan (tanpa /create), ubah baris ini:
+          _u('laporan/create'),
+          headers: await _headers(),
+          body: jsonEncode(payload),
+        )
+        .timeout(_timeout);
+    _log('POST /laporan/create -> ${r.statusCode} ${r.body}');
 
-    var r = await http.patch(
-      _u(_detail(id)),
-      headers: await _headers(),
-      body: jsonEncode(body),
-    );
-    if (_debug) print('[CAGE UPDATE PATCH] ${r.statusCode}');
-
-    if (r.statusCode == 405 || r.statusCode == 404) {
-      r = await http.put(
-        _u(_detail(id)),
-        headers: await _headers(),
-        body: jsonEncode(body),
-      );
-      if (_debug) print('[CAGE UPDATE PUT] ${r.statusCode}');
+    if (r.statusCode != 201 && r.statusCode != 200) {
+      final msg = (_safeDecode(r.body) as Map?)?['message']?.toString();
+      throw Exception(msg ?? 'Gagal membuat laporan (status ${r.statusCode}).');
     }
 
+    // Bila BE kirim success:false
+    final parsed = _safeDecode(r.body);
+    if (parsed is Map &&
+        parsed.containsKey('success') &&
+        parsed['success'] == false) {
+      final msg = parsed['message']?.toString() ?? 'Gagal membuat laporan.';
+      throw Exception(msg);
+    }
+  }
+
+  // ================= UPDATE =================
+
+  Future<void> updateById(int id, Map<String, dynamic> ui) async {
+    final body = <String, dynamic>{
+      if (ui['nama'] != null) 'nama': ui['nama'].toString(),
+      if (ui['kapasitas'] != null) 'kapasitas': ui['kapasitas'],
+    };
+
+    final r = await http
+        .patch(
+          _u('kandang/$id'),
+          headers: await _headers(),
+          body: jsonEncode(body),
+        )
+        .timeout(_timeout);
+    _log('PATCH /kandang/$id -> ${r.statusCode}');
+
     if (r.statusCode != 200) {
-      final dec = _safeDecode(r.body);
-      final msg = (dec is Map && dec['message'] != null)
-          ? dec['message'].toString()
-          : r.body.toString();
-      throw Exception(
-        'Gagal memperbarui kandang (status ${r.statusCode}): $msg',
-      );
+      _throwHttp('PATCH /kandang/$id', r);
     }
   }
 
   // ================= DELETE =================
+
   Future<void> deleteById(int id) async {
-    var r = await http.delete(_u(_detail(id)), headers: await _headers());
-    if (r.statusCode == 200 || r.statusCode == 204) return;
+    final r = await http
+        .delete(_u('kandang/$id'), headers: await _headers())
+        .timeout(_timeout);
+    _log('DELETE /kandang/$id -> ${r.statusCode}');
+    if (r.statusCode != 200 && r.statusCode != 204) {
+      _throwHttp('DELETE /kandang/$id', r);
+    }
+  }
 
-    r = await http.delete(_u(_deleteAlt(id)), headers: await _headers());
-    if (r.statusCode == 200 || r.statusCode == 204) return;
+  // ================= EXTRA: Laporan =================
 
-    final m = (_safeDecode(r.body) as Map?)?['message']?.toString();
-    throw Exception(m ?? 'Gagal menghapus kandang (status ${r.statusCode}).');
+  /// Ambil daftar laporan untuk sebuah kandang.
+  /// GET /laporan?kandang=<id>
+  Future<List<Laporan>> getLaporanPerKandang(int kandangId) async {
+    final r = await http
+        .get(_u('laporan', {'kandang': kandangId}), headers: await _headers())
+        .timeout(_timeout);
+
+    _log('GET /laporan?kandang=$kandangId -> ${r.statusCode}');
+    if (r.statusCode != 200) {
+      _throwHttp('GET /laporan?kandang=$kandangId', r);
+    }
+
+    final map = _safeDecode(r.body);
+    final list = (map is Map ? map['data'] : null) as List? ?? const [];
+    return list
+        .whereType<Map>()
+        .map((e) => Laporan.fromJson(e.cast<String, dynamic>()))
+        .toList();
+  }
+
+  /// Ambil detail satu laporan.
+  /// GET /laporan/<id>
+  Future<Laporan> getLaporanById(int laporanId) async {
+    final r = await http
+        .get(_u('laporan/$laporanId'), headers: await _headers())
+        .timeout(_timeout);
+
+    _log('GET /laporan/$laporanId -> ${r.statusCode}');
+    if (r.statusCode != 200) {
+      _throwHttp('GET /laporan/$laporanId', r);
+    }
+
+    final map = _safeDecode(r.body);
+    final data = (map is Map ? map['data'] : null);
+    if (data is Map<String, dynamic>) {
+      return Laporan.fromJson(data);
+    }
+    throw Exception('Format detail laporan tidak dikenali.');
+  }
+
+  /// Update laporan (opsional, bila BE sediakan).
+  /// PATCH /laporan/<id>
+  Future<void> updateLaporanById(
+    int laporanId,
+    Map<String, dynamic> patch,
+  ) async {
+    final r = await http
+        .patch(
+          _u('laporan/$laporanId'),
+          headers: await _headers(),
+          body: jsonEncode(patch),
+        )
+        .timeout(_timeout);
+
+    _log('PATCH /laporan/$laporanId -> ${r.statusCode}');
+    if (r.statusCode != 200) {
+      _throwHttp('PATCH /laporan/$laporanId', r);
+    }
+  }
+
+  /// Hapus laporan (opsional).
+  /// DELETE /laporan/<id>
+  Future<void> deleteLaporanById(int laporanId) async {
+    final r = await http
+        .delete(_u('laporan/$laporanId'), headers: await _headers())
+        .timeout(_timeout);
+
+    _log('DELETE /laporan/$laporanId -> ${r.statusCode}');
+    if (r.statusCode != 200 && r.statusCode != 204) {
+      _throwHttp('DELETE /laporan/$laporanId', r);
+    }
+  }
+}
+
+/// =======================
+/// Model ringan: Laporan
+/// =======================
+class Laporan {
+  final int id;
+  final String? pencatat;
+
+  /// tanggal dalam format 'YYYY-MM-DD' dari BE
+  final String? tanggalIso;
+
+  /// jam 'HH:mm' dari BE
+  final String? jam;
+  final num? bobot; // rata_bobot / bobot
+  final int? mati;
+  final num? pakan;
+  final num? solar;
+  final num? sekam;
+  final num? obat;
+
+  Laporan({
+    required this.id,
+    this.pencatat,
+    this.tanggalIso,
+    this.jam,
+    this.bobot,
+    this.mati,
+    this.pakan,
+    this.solar,
+    this.sekam,
+    this.obat,
+  });
+
+  factory Laporan.fromJson(Map<String, dynamic> json) {
+    // BE di screenshot mengembalikan: id, pencatat, tanggal, jam, bobot, mati, pakan, (mungkin solar, sekam, obat)
+    return Laporan(
+      id: (json['id'] as int?) ?? int.tryParse('${json['id']}') ?? -1,
+      pencatat: json['pencatat']?.toString(),
+      tanggalIso: json['tanggal']?.toString(),
+      jam: json['jam']?.toString(),
+      bobot: _asNum(json['bobot']),
+      mati: (json['mati'] is int)
+          ? json['mati'] as int
+          : int.tryParse('${json['mati']}'),
+      pakan: _asNum(json['pakan']),
+      solar: _asNum(json['solar']),
+      sekam: _asNum(json['sekam']),
+      obat: _asNum(json['obat']),
+    );
+  }
+
+  static num? _asNum(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v;
+    return num.tryParse(v.toString());
+  }
+
+  /// Ringkasan untuk UI seperti contoh:
+  /// "Bobot 1.8 kg | Mati: 4 | Pakan: 120 kg"
+  String summary() {
+    final b = (bobot != null) ? 'Bobot ${_trim(bobot)} kg' : null;
+    final m = (mati != null) ? 'Mati: ${mati!}' : null;
+    final p = (pakan != null) ? 'Pakan: ${_trim(pakan)} kg' : null;
+    final parts = [
+      b,
+      m,
+      p,
+    ].where((e) => e != null && e!.isNotEmpty).cast<String>().toList();
+    return parts.join(' | ');
+  }
+
+  String get tanggalForHuman {
+    // Biarkan BE yang kirim format human; kalau perlu lokalize, lakukan di UI.
+    return tanggalIso ?? '';
+  }
+
+  static String _trim(num? n) {
+    if (n == null) return '';
+    final s = n.toString();
+    // Hilangkan ".0"
+    return s.endsWith('.0') ? s.substring(0, s.length - 2) : s;
   }
 }
