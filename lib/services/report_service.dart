@@ -38,4 +38,33 @@ class ReportService {
       throw Exception('$message (Status: ${response.statusCode})');
     }
   }
+  Future<Report> getReportById(int reportId) async {
+    final token = await _auth.getToken();
+    if (token == null) {
+      throw Exception('Autentikasi Gagal: Token tidak ditemukan');
+    }
+
+    // Endpoint untuk detail: /laporan/{id}
+    final uri = Uri.parse('$_baseUrl/laporan/$reportId');
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+      // Data detail adalah satu objek, bukan list
+      final Map<String, dynamic> data = body['data'];
+      return Report.fromJson(data);
+    } else {
+      final body = jsonDecode(response.body);
+      final message = body['message'] ?? 'Gagal mengambil detail laporan';
+      throw Exception('$message (Status: ${response.statusCode})');
+    }
+  }
 }

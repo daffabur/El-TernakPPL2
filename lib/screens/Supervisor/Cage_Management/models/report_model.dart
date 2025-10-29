@@ -7,7 +7,9 @@ class Report {
   final String jam;
   final double bobot;
   final int mati;final int pakan;
-  // Jika ada properti lain di masa depan, tambahkan di sini (misal: solar, sekam, obat)
+  final int? solar;
+  final int? sekam;
+  final int? obat;
 
   Report({
     required this.id,
@@ -17,11 +19,15 @@ class Report {
     required this.bobot,
     required this.mati,
     required this.pakan,
+    this.solar,
+    this.sekam,
+    this.obat,
   });
 
   // Helper untuk parsing aman dari JSON, mencegah error karena tipe data atau nilai null
   static int _toInt(dynamic v) => v is int ? v : int.tryParse(v?.toString() ?? '0') ?? 0;
   static double _toDouble(dynamic v) => v is double ? v : double.tryParse(v?.toString() ?? '0.0') ?? 0.0;
+  static int? _toNullableInt(dynamic v) => v == null ? null : _toInt(v);
 
   // Factory constructor untuk membuat objek Report dari Map (data JSON)
   factory Report.fromJson(Map<String, dynamic> json) {
@@ -33,6 +39,9 @@ class Report {
       bobot: _toDouble(json['bobot']),
       mati: _toInt(json['mati']),
       pakan: _toInt(json['pakan']),
+      solar: _toNullableInt(json['solar']),
+      sekam: _toNullableInt(json['sekam']),
+      obat: _toNullableInt(json['obat']),
     );
   }
 }

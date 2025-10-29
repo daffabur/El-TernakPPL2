@@ -2,6 +2,7 @@
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/report_model.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/widgets/Custom_ReportCard.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/widgets/Custom_detail_report.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -64,9 +65,13 @@ class CustomReportList extends StatelessWidget {
                 details: "Bobot: ${report.bobot} kg | Mati: ${report.mati} | Pakan: ${report.pakan} kg",
                 time: report.jam,
                 onTap: () {
-                  print("Report for ${report.tanggal} tapped!");
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Dicatat oleh: ${report.pencatat}'))
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CustomDetailReport(
+                        reportId: report.id, // Kirim ID laporan ke halaman detail
+                      ),
+                    ),
                   );
                 },
               );

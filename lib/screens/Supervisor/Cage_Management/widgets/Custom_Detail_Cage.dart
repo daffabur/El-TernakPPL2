@@ -3,6 +3,7 @@ import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/cage_model.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/report_model.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/widgets/Custom_ReportCard.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/widgets/Custom_detail_report.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/widgets/custom_report_history.dart';
 import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:el_ternak_ppl2/services/cage_services.dart';
@@ -585,9 +586,13 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
                     time: report.jam,
                     details: "Bobot: ${report.bobot} kg | Mati: ${report.mati} | Pakan: ${report.pakan} kg",
                     onTap: () {
-                      print("Report card ID: ${report.id} tapped!");
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Dicatat oleh: ${report.pencatat}'))
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CustomDetailReport(
+                            reportId: report.id, // <-- Kirim ID laporan
+                          ),
+                        ),
                       );
                     },
                   );
