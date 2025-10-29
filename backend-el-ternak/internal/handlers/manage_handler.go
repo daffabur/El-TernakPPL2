@@ -6,7 +6,6 @@ import (
 	"backend-el-ternak/utils"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 )
@@ -62,15 +61,13 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(req)
-
 	err := services.CreateUser(req.Username, req.Password, newRole, req.IsActive ,req.KandangID)
 	if err != nil {
 		if errors.Is(err, services.ErrUserExists) {
 			utils.RespondError(w, http.StatusConflict, "username telah terdaftar")
 			return
 		}
-		fmt.Println(err)
+
 		utils.RespondError(w, http.StatusInternalServerError, "gagal menambahkan user")
 		return
 	}
@@ -102,15 +99,13 @@ func EditPegawai(w http.ResponseWriter, r *http.Request)  {
 		"is_active": req.IsActive,
 	}
 
-	fmt.Println(newData)
-
 	err := services.UpdateUserByUsername(req.Username, newData)
 	if err != nil {
 		if err.Error() == "not found" {
 			utils.RespondError(w, http.StatusNotFound, "user tidak ditemukan")
 			return
 		}
-		fmt.Println(err)
+
 		utils.RespondError(w, http.StatusInternalServerError, "failed change user data")
 		return
 	}

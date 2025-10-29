@@ -13,6 +13,7 @@ import (
 )
 
 func init()  {
+	initializers.SynchronizeTime()
 	initializers.LoadEnvVariables()
 	initializers.ConnectDB()
 	handlers.InitS3()
