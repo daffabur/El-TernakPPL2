@@ -6,10 +6,11 @@ import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/cage_model.dart';
 
 class CageService {
-  // Base URL Postman kamu (port 80 + /api)
+  // Base URL (port 80 + /api)
   static const String _base =
       'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api';
 
+  // Set true untuk melihat log saat dev
   static const bool _debug = true;
   static const Duration _timeout = Duration(seconds: 20);
 
@@ -22,8 +23,7 @@ class CageService {
     if (token == null || token.isEmpty) {
       throw Exception('Token tidak ditemukan. Silakan login ulang.');
     }
-
-    // Di environment kamu: Authorization = token mentah (tanpa "Bearer ").
+    // Authorization = token mentah (tanpa "Bearer ")
     final authValue = token.startsWith('Bearer ') ? token : token;
 
     return {
@@ -33,9 +33,7 @@ class CageService {
   }
 
   Uri _u(String p, [Map<String, dynamic>? q]) {
-    final base = _base.endsWith('/')
-        ? _base.substring(0, _base.length - 1)
-        : _base;
+    final base = _base.endsWith('/') ? _base.substring(0, _base.length - 1) : _base;
     final path = p.startsWith('/') ? p : '/$p';
     final uri = Uri.parse('$base$path');
     return (q == null || q.isEmpty)
@@ -63,6 +61,12 @@ class CageService {
   Never _throwHttp(String where, http.Response r) {
     final body = r.body.isEmpty ? '<empty>' : r.body;
     throw Exception('[$where] HTTP ${r.statusCode} $body');
+  }
+
+  int? _toInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    return int.tryParse(v.toString());
   }
 
   List<Cage> _parseList(dynamic body) {
@@ -104,7 +108,7 @@ class CageService {
   /// Mengembalikan list berisi 1 item (atau kosong bila pegawai belum punya kandang).
   Future<List<Cage>> getForEmployee() async {
     try {
-      // 1) Profile untuk ambil kandang_id
+      // 1) Ambil profile untuk kandang_id
       final prof = await http
           .get(_u('account/me'), headers: await _headers())
           .timeout(_timeout);
@@ -115,25 +119,21 @@ class CageService {
 
       final body = _safeDecode(prof.body);
       final data = (body is Map<String, dynamic>) ? body['data'] : null;
-      final dynamic kandangIdDyn = (data is Map<String, dynamic>)
-          ? data['kandang_id']
-          : null;
-
+      final kandangIdDyn = (data is Map<String, dynamic>) ? data['kandang_id'] : null;
       if (kandangIdDyn == null) {
         _log('Pegawai tidak memiliki kandang.');
         return const <Cage>[];
       }
 
-      final int kandangId = (kandangIdDyn is int)
+      final kandangId = (kandangIdDyn is int)
           ? kandangIdDyn
           : int.tryParse(kandangIdDyn.toString()) ?? -1;
-
       if (kandangId <= 0) {
         _log('kandang_id tidak valid: $kandangIdDyn');
         return const <Cage>[];
       }
 
-      // 2) Ambil detail kandang sesuai kandang_id
+      // 2) Ambil detail kandang
       final r = await http
           .get(_u('kandang/$kandangId'), headers: await _headers())
           .timeout(_timeout);
@@ -165,9 +165,37 @@ class CageService {
   // ================= CREATE =================
 
   Future<Cage> create(Map<String, dynamic> ui) async {
+    // Ambil id penanggung jawab dari berbagai kemungkinan input
+    int? idPj;
+    final dynamic idPenanggungJawabValue = ui['idPenanggungJawab'];
+    if (idPenanggungJawabValue is List && idPenanggungJawabValue.isNotEmpty) {
+      idPj = _toInt(idPenanggungJawabValue.first);
+    } else if (idPenanggungJawabValue is int) {
+      idPj = idPenanggungJawabValue;
+    } else {
+      idPj = _toInt(idPenanggungJawabValue);
+    }
+    idPj ??= _toInt(ui['id_pj_kandang']);
+
+    if (idPj == null || idPj == 0) {
+      final dynamic picData = ui['pic'];
+      if (picData != null) {
+        try {
+          idPj = _toInt((picData as dynamic).id);
+        } catch (_) {
+          if (picData is Map) {
+            idPj = _toInt(picData['id']);
+          }
+        }
+      }
+    }
+
+    // Body untuk API
     final body = <String, dynamic>{
       'nama': (ui['nama'] ?? ui['name'] ?? ui['Nama'])?.toString(),
       'kapasitas': ui['kapasitas'] ?? ui['capacity'] ?? 0,
+      if (idPj != null && idPj != 0) 'idPenanggungJawab': idPj,
+      if (ui['status'] != null) 'status': ui['status'].toString().toLowerCase(),
     };
 
     final r = await http
@@ -183,9 +211,9 @@ class CageService {
     final data = (_safeDecode(r.body) as Map?)?['data'];
     if (data is Map<String, dynamic>) return Cage.fromJson(data);
 
-    // fallback kalau BE tidak mengembalikan data
+    // Fallback jika respons tidak mengandung data, buat objek Cage dari input
     return Cage(
-      id: DateTime.now().millisecondsSinceEpoch,
+      id: DateTime.now().millisecondsSinceEpoch, // ID sementara
       name: (body['nama'] as String?) ?? '',
       capacity: (body['kapasitas'] as int?) ?? 0,
       population: 0,
@@ -193,6 +221,10 @@ class CageService {
       pic: null,
       status: 'active',
       notes: null,
+      pakan: 0,
+      solar: 0,
+      sekam: 0,
+      obat: 0,
     );
   }
 
@@ -247,8 +279,7 @@ class CageService {
 
     final r = await http
         .post(
-          // Jika BE kamu pakai /laporan (tanpa /create), ubah baris ini:
-          _u('laporan/create'),
+          _u('laporan/create'), // ubah ke 'laporan' jika BE tidak pakai /create
           headers: await _headers(),
           body: jsonEncode(payload),
         )
@@ -387,10 +418,10 @@ class Laporan {
   final int id;
   final String? pencatat;
 
-  /// tanggal dalam format 'YYYY-MM-DD' dari BE
+  /// tanggal 'YYYY-MM-DD'
   final String? tanggalIso;
 
-  /// jam 'HH:mm' dari BE
+  /// jam 'HH:mm'
   final String? jam;
   final num? bobot; // rata_bobot / bobot
   final int? mati;
@@ -413,7 +444,6 @@ class Laporan {
   });
 
   factory Laporan.fromJson(Map<String, dynamic> json) {
-    // BE di screenshot mengembalikan: id, pencatat, tanggal, jam, bobot, mati, pakan, (mungkin solar, sekam, obat)
     return Laporan(
       id: (json['id'] as int?) ?? int.tryParse('${json['id']}') ?? -1,
       pencatat: json['pencatat']?.toString(),
@@ -436,29 +466,23 @@ class Laporan {
     return num.tryParse(v.toString());
   }
 
-  /// Ringkasan untuk UI seperti contoh:
-  /// "Bobot 1.8 kg | Mati: 4 | Pakan: 120 kg"
   String summary() {
     final b = (bobot != null) ? 'Bobot ${_trim(bobot)} kg' : null;
     final m = (mati != null) ? 'Mati: ${mati!}' : null;
     final p = (pakan != null) ? 'Pakan: ${_trim(pakan)} kg' : null;
-    final parts = [
-      b,
-      m,
-      p,
-    ].where((e) => e != null && e!.isNotEmpty).cast<String>().toList();
+    final parts = [b, m, p]
+        .where((e) => e != null && e!.isNotEmpty)
+        .cast<String>()
+        .toList();
     return parts.join(' | ');
   }
 
-  String get tanggalForHuman {
-    // Biarkan BE yang kirim format human; kalau perlu lokalize, lakukan di UI.
-    return tanggalIso ?? '';
-  }
+  String get tanggalForHuman => tanggalIso ?? '';
 
   static String _trim(num? n) {
     if (n == null) return '';
     final s = n.toString();
-    // Hilangkan ".0"
     return s.endsWith('.0') ? s.substring(0, s.length - 2) : s;
   }
 }
+

@@ -1,28 +1,28 @@
-// lib/screens/Supervisor/Cage_Management/widgets/Custom_Detail_Cage.dart
 import 'dart:convert';
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/cage_model.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/report_model.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/widgets/Custom_ReportCard.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/widgets/Custom_detail_report.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/widgets/custom_report_history.dart';
 import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:el_ternak_ppl2/services/cage_services.dart';
+import 'package:el_ternak_ppl2/services/report_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/material_symbols.dart';
-
-// ===== tambahan import halaman agar bisa dinavigasi dari bottom bar lokal =====
 import 'package:el_ternak_ppl2/screens/Supervisor/Home_Screen/home_screen.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/money_management.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/cage_management.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/account_management.dart';
-import 'package:iconify_flutter/icons/fluent_mdl2.dart';
-import 'package:iconify_flutter/icons/healthicons.dart';
-import 'package:iconify_flutter/icons/heroicons_solid.dart';
 
 class CustomDetailCage extends StatefulWidget {
   final Cage cage;
   final String? overridePic;
+
 
   const CustomDetailCage({super.key, required this.cage, this.overridePic});
 
@@ -32,36 +32,52 @@ class CustomDetailCage extends StatefulWidget {
 
 class _CustomDetailCageState extends State<CustomDetailCage> {
   final _cageService = CageService();
+  final _reportService = ReportService();
   final _auth = AuthService();
 
-  Cage? _cage; // detail terkini
-  String? _picFromApi; // nama PIC dari response mentah
+  Cage? _cage;
+  String? _picFromApi;
+  List<Report> _reports = [];
   bool _loading = true;
   bool _deleting = false;
 
-  // ⚠️ samakan dengan CageService
-  static const String _base = 'http://10.0.2.2:11222/api';
+
+  static const String _base = 'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api/';
 
   @override
   void initState() {
     super.initState();
+    _cage = widget.cage;
     _loadDetail();
   }
 
   Future<void> _loadDetail() async {
+    // Tampilkan loading indicator saat refresh
+    if (mounted) setState(() => _loading = true);
+
     try {
-      final fresh = await _cageService.getById(widget.cage.id);
-      await _fetchPicRaw(widget.cage.id);
+      // Ambil detail kandang dan laporan secara bersamaan
+      final freshCageFuture = _cageService.getById(widget.cage.id);
+      final picRawFuture = _fetchPicRaw(widget.cage.id);
+      final reportsFuture = _reportService.getByCageId(widget.cage.id);
+
+      // Tunggu semua proses selesai
+      final results = await Future.wait([freshCageFuture, picRawFuture, reportsFuture]);
+
+      final freshCage = results[0] as Cage;
+      final reports = results[2] as List<Report>;
 
       if (!mounted) return;
       setState(() {
-        _cage = fresh;
+        _cage = freshCage;
+        _reports = reports; // Simpan daftar laporan
         _loading = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _cage = widget.cage;
+        _cage = widget.cage; // Tampilkan data lama jika gagal
+        _reports = []; // Kosongkan laporan jika gagal
         _loading = false;
       });
     }
@@ -84,17 +100,35 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
       if (res.statusCode != 200) return;
       final body = jsonDecode(res.body);
       final data = (body is Map<String, dynamic>) ? body['data'] : null;
+
       if (data is Map<String, dynamic>) {
-        final raw =
-            (data['Penanggung_jawab'] ??
-                    data['penanggung_jawab'] ??
-                    data['pic'] ??
-                    data['PIC'])
-                ?.toString()
-                .trim();
-        if (raw != null && raw.isNotEmpty) {
+        // --- PERBAIKAN UTAMA DI SINI ---
+        final dynamic pjData =
+            data['Penanggung_jawab'] ?? data['penanggung_jawab'];
+
+        String? picName;
+
+        // Cek jika data PJ adalah List dan tidak kosong
+        if (pjData is List && pjData.isNotEmpty) {
+          // Ambil objek pertama dari List
+          final firstPj = pjData.first;
+          // Cek jika objek tersebut adalah Map dan ambil 'username'
+          if (firstPj is Map<String, dynamic>) {
+            picName = firstPj['username']?.toString() ?? firstPj['name']?.toString();
+          }
+        }
+        // Fallback jika ternyata data PJ bukan List, tapi Map
+        else if (pjData is Map<String, dynamic>) {
+          picName = pjData['username']?.toString() ?? pjData['name']?.toString();
+        }
+
+        final rawName = picName?.trim();
+        // --- AKHIR PERBAIKAN ---
+
+        if (rawName != null && rawName.isNotEmpty) {
           if (!mounted) return;
-          setState(() => _picFromApi = raw);
+          // Set _picFromApi dengan nama yang sudah bersih
+          setState(() => _picFromApi = rawName);
         }
       }
     } catch (_) {
@@ -254,78 +288,25 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
     );
   }
 
-  Widget _bottomBar() {
-    // tab aktif untuk page ini = 2 (Cage)
-    return SafeArea(
-      minimum: const EdgeInsets.only(bottom: 8),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 32),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(50),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              spreadRadius: 1,
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(
-              icon: MaterialSymbols.home,
-              label: 'Home',
-              index: 0,
-              selected: false,
-            ),
-            _buildNavItem(
-              icon: FluentMdl2.money,
-              label: 'Money',
-              index: 1,
-              selected: false,
-            ),
-            _buildNavItem(
-              icon: Healthicons.animal_chicken,
-              label: 'Cage',
-              index: 2,
-              selected: true,
-            ),
-            _buildNavItem(
-              icon: MaterialSymbols.warehouse_rounded,
-              label: 'Chicken',
-              index: 3,
-              selected: false,
-            ),
-            _buildNavItem(
-              icon: HeroiconsSolid.user_group,
-              label: 'User',
-              index: 4,
-              selected: false,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
+    if (_loading  && _cage == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final cage = _cage!;
-    final String picText = (_picFromApi?.trim().isNotEmpty == true)
-        ? _picFromApi!.trim()
-        : ((cage.pic ?? '').trim().isNotEmpty
-              ? cage.pic!.trim()
-              : ((widget.overridePic ?? '').trim().isNotEmpty
-                    ? widget.overridePic!.trim()
-                    : '-'));
+    String picText;
+
+    if (_picFromApi?.trim().isNotEmpty == true) {
+      picText = _picFromApi!.trim();
+    } else if (widget.overridePic?.trim().isNotEmpty == true) {
+      picText = widget.overridePic!.trim();
+    } else if (cage.pic?.name.trim().isNotEmpty == true) {
+      picText = cage.pic!.name.trim();
+    } else {
+      picText = 'Belum Ditentukan';
+    }
 
     final (label, bg, border, text) = _statusStyle(cage.status);
 
@@ -366,7 +347,6 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
         surfaceTintColor: Colors.transparent,
         foregroundColor: Colors.black87,
         elevation: 0,
-        // (hapus ikon delete di AppBar sesuai permintaan)
       ),
 
       // Pull-to-refresh supaya status/PIC bisa diperbarui manual
@@ -503,7 +483,7 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
                   Expanded(
                     child: _smallStatCard(
                       title: "Sekam Digunakan",
-                      value: "1 Kg",
+                      value: "${cage.sekam} Kg",
                       asset: "assets/images/ic_sekam.svg",
                       assetScale: 0.15,
                     ),
@@ -512,7 +492,7 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
                   Expanded(
                     child: _smallStatCard(
                       title: "Solar Digunakan",
-                      value: "20 L",
+                      value: "${cage.solar} L",
                       asset: "assets/images/ic_solar.svg",
                       assetScale: 0.2,
                     ),
@@ -524,7 +504,7 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
 
               _wideStatCard(
                 title: "Konsumsi Pakan",
-                value: "100 Kg",
+                value: "${cage.pakan} Kg",
                 asset: "assets/images/ic_pakan.svg",
                 assetScale: 0.25,
               ),
@@ -533,14 +513,91 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
 
               _wideStatCard(
                 title: "Obat",
-                value: "20 L",
+                value: "${cage.obat} L",
                 asset: "assets/images/ic_obat.svg",
                 assetScale: 0.2,
               ),
 
               const SizedBox(height: 24),
 
-              // Tombol "Hapus Kandang" (outline merah, rounded pill)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text("Laporan Terbaru",
+                    style: GoogleFonts.poppins(
+                      color: AppStyles.primaryColor,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600
+                    ),
+                  ),
+                  OutlinedButton(
+                      onPressed: (){
+                        Navigator.push(
+                          context, MaterialPageRoute(builder: (context) => ReportHistoryScreen(cageId: cage.id,
+                          cageName: cage.name,)),
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                      shape: const StadiumBorder(),
+                      side: BorderSide(color: AppStyles.primaryColor, width: 1.5),
+                      foregroundColor: AppStyles.primaryColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                      child: Text(
+                        'Lihat Lengkap',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                  )
+                ],
+              ),
+              const SizedBox(height: 16),
+              _loading
+                  ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+                  : _reports.isEmpty
+                  ? Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 40.0),
+                alignment: Alignment.center,
+                child: Column(
+                  children: [
+                    Icon(Icons.receipt_long_rounded, color: Colors.grey.shade300, size: 48),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Belum ada laporan terbaru",
+                      style: GoogleFonts.poppins(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              )
+                  : Column(
+                children: _reports
+                    .take(4)
+                    .map((report) {
+                  return CustomReportcard(
+                    date: report.tanggal,
+                    time: report.jam,
+                    details: "Bobot: ${report.bobot} kg | Mati: ${report.mati} | Pakan: ${report.pakan} kg",
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CustomDetailReport(
+                            reportId: report.id, // <-- Kirim ID laporan
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }).toList(),
+              ),
               SafeArea(
                 top: false,
                 minimum: const EdgeInsets.only(bottom: 8),
@@ -589,8 +646,6 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
         ),
       ),
 
-      // === bottom bar lokal (mirip navbar) ===
-      bottomNavigationBar: _bottomBar(),
     );
   }
 

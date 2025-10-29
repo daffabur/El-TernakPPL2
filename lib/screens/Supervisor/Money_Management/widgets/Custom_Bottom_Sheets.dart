@@ -37,13 +37,13 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
 
   // DATA & FORMATTERS
   final List<String> _kategoriList = [
-    "Solar",
-    "Obat",
-    "Pakan",
-    "Gaji",
-    "Panen",
-    "Penjualan Ayam",
-    "Lainnya",
+    "solar",
+    "obat",
+    "pakan",
+    "gaji",
+    "panen",
+    "penjualan ayam",
+    "lainnya",
   ];
   final currencyFormatter = NumberFormat.currency(
     locale: 'id_ID',
