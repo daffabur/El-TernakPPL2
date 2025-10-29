@@ -86,9 +86,14 @@ class CageService {
     throw Exception('Format detail kandang tidak dikenali.');
   }
 
-  // ================= READ =================
+  // ================ Paths (perlu persis!) ================
+  static const _listAdminA = '/kandang/'; // dengan trailing slash
+  static const _listAdminB = '/kandang'; // tanpa trailing slash
 
-  /// Admin/Supervisor – ambil semua kandang
+  static const _create = '/kandang/create';
+  String _detail(int id) => '/kandang/$id';
+  String _deleteAlt(int id) => '/kandang/delete/$id';
+
   Future<List<Cage>> getAll() async {
     final r = await http
         .get(_u('kandang'), headers: await _headers())
@@ -164,10 +169,46 @@ class CageService {
 
   // ================= CREATE =================
 
+// lib/services/cage_services.dart
+
+  // ================= CREATE (SUDAH DIPERBAIKI) =================
   Future<Cage> create(Map<String, dynamic> ui) async {
+    int? idPj;
+    final dynamic idPenanggungJawabValue = ui['idPenanggungJawab'];
+    if (idPenanggungJawabValue is List && idPenanggungJawabValue.isNotEmpty) {
+      idPj = _toInt(idPenanggungJawabValue.first);
+    } else if (idPenanggungJawabValue is int) {
+      idPj = idPenanggungJawabValue;
+    } else {
+      idPj = _toInt(idPenanggungJawabValue);
+    }
+    idPj ??= _toInt(ui['id_pj_kandang']);
+
+    if (idPj == null || idPj == 0) {
+      final dynamic picData = ui['pic'];
+      if (picData != null) {
+        try {
+          // Coba akses properti 'id' jika 'picData' adalah objek (misal: User)
+          idPj = _toInt((picData as dynamic).id);
+        } catch (_) {
+          // Jika gagal (mis. 'picData' adalah Map), coba akses sebagai Map
+          if (picData is Map) {
+            idPj = _toInt(picData['id']);
+          }
+        }
+      }
+    } // <-- KURUNG PENUTUP YANG HILANG DITAMBAHKAN DI SINI
+
+    // --- BLOK KODE INI DIPINDAHKAN KE LUAR DARI 'IF' ---
+    // Siapkan body untuk dikirim ke API
     final body = <String, dynamic>{
       'nama': (ui['nama'] ?? ui['name'] ?? ui['Nama'])?.toString(),
-      'kapasitas': ui['kapasitas'] ?? ui['capacity'] ?? 0,
+      'kapasitas': _toInt(ui['kapasitas'] ?? ui['capacity']),
+
+      // Kirim ke backend jika idPj valid (bukan null dan bukan 0)
+      if (idPj != null && idPj != 0) 'idPenanggungJawab': idPj,
+
+      if (ui['status'] != null) 'status': ui['status'].toString().toLowerCase(),
     };
 
     final r = await http
@@ -183,9 +224,9 @@ class CageService {
     final data = (_safeDecode(r.body) as Map?)?['data'];
     if (data is Map<String, dynamic>) return Cage.fromJson(data);
 
-    // fallback kalau BE tidak mengembalikan data
+    // Fallback jika respons tidak mengandung data, buat objek Cage dari input
     return Cage(
-      id: DateTime.now().millisecondsSinceEpoch,
+      id: DateTime.now().millisecondsSinceEpoch, // ID sementara
       name: (body['nama'] as String?) ?? '',
       capacity: (body['kapasitas'] as int?) ?? 0,
       population: 0,
@@ -193,7 +234,12 @@ class CageService {
       pic: null,
       status: 'active',
       notes: null,
+      pakan: 0,
+      solar: 0,
+      sekam: 0,
+      obat: 0,
     );
+    // --- AKHIR BLOK YANG DIPINDAHKAN ---
   }
 
   /// ================ CREATE DAILY REPORT (laporan) ================

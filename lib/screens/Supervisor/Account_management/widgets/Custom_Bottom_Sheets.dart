@@ -39,7 +39,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
   final CageService _cageService = CageService();
 
   // Samakan dengan base URL server kamu
-  static const String _base = 'http://10.0.2.2:11222/api';
+  static const String _base = 'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api';
 
   // ===== Controllers & state =====
   final _usernameController = TextEditingController();
@@ -147,7 +147,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
         if (u != null && u.isNotEmpty) {
           // 1) Coba cocokkan langsung kalau model list sudah punya field pic
           final fromList = list.firstWhere(
-            (c) => (c.pic ?? '').trim().toLowerCase() == u,
+            (c) => (c.pic?.name ?? '').trim().toLowerCase() == u,
             orElse: () => Cage(
               id: -1,
               name: '',
@@ -157,6 +157,10 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
               pic: null,
               status: '',
               notes: null,
+              pakan: 0,
+              solar: 0,
+              sekam: 0,
+              obat: 0,
             ),
           );
           if (fromList.id != -1) {

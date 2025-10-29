@@ -83,7 +83,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
       _kapasitasController.text = c.capacity.toString();
 
       // Nama PIC dari object awal (bisa saja masih kosong → nanti difetch)
-      final fromBe = (c.pic ?? '').trim();
+      final fromBe = (c.pic?.name ?? '').trim();
       _selectedPersonName = fromBe.isEmpty ? null : fromBe;
 
       // Status dari object awal (nanti bisa dioverride saat fetch raw)
@@ -107,8 +107,6 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
   String _norm(String? s) =>
       (s ?? '').replaceAll(RegExp(r'\s+'), ' ').trim().toLowerCase();
 
-  /// Ubah status dari BE (apa pun formatnya) → 'active' / 'inactive'
-  /// Jika di luar opsi (mis. 'maintenance'), kita simpan labelnya agar muncul sebagai placeholder.
   String _normalizeStatusToValue(String statusRaw) {
     final s = _norm(statusRaw);
     if (s == 'active' || s.contains('aktif')) return 'active';

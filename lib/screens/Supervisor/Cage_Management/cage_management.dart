@@ -76,13 +76,28 @@ class _CageManagementState extends State<CageManagement> {
       final cap =
           int.tryParse('${result['capacity'] ?? result['kapasitas'] ?? 0}') ??
           0;
-      final pic = (result['pic'] as String?)?.trim();
-      if ((name ?? '').isNotEmpty && (pic ?? '').isNotEmpty) {
+
+      String? pic;
+      final picData = result['pic'];
+      if (picData is String) {
+        pic = picData;
+      } else if (picData != null) {
+        try {
+          pic = (picData as dynamic).name?.toString();
+        } catch (e) {
+          if (picData is Map) {
+            pic = picData['name']?.toString() ?? picData['nama']?.toString();
+          }
+        }
+      }
+      pic = pic?.trim();
+
+      if (name != null && name.isNotEmpty && pic != null && pic.isNotEmpty) {
         final idx = _items.indexWhere(
-          (c) => c.name.trim() == name && c.capacity == cap,
+              (c) => c.name.trim() == name && c.capacity == cap,
         );
         if (idx != -1) {
-          _picOverrides[_items[idx].id] = pic!;
+          _picOverrides[_items[idx].id] = pic;
         }
       }
 
@@ -92,9 +107,10 @@ class _CageManagementState extends State<CageManagement> {
       );
     } catch (e) {
       if (!mounted) return;
+      final errorMessage = e.toString().replaceAll('Exception: ', '');
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Gagal menambah kandang: $e')));
+      ).showSnackBar(SnackBar(content: Text('Gagal menambah kandang: $errorMessage')));
     }
   }
 
@@ -117,10 +133,25 @@ class _CageManagementState extends State<CageManagement> {
       await _service.updateById(cage.id, result);
       await _fetchAll();
 
-      // simpan override PIC untuk tampilan detail (jika ada)
-      final newPic = (result['pic'] as String?)?.trim();
-      if ((newPic ?? '').isNotEmpty) {
-        _picOverrides[cage.id] = newPic!;
+      String? newPic;
+      final picData = result['pic'];
+      if (picData is String) {
+        newPic = picData;
+      } else if (picData != null) {
+        try {
+          newPic = (picData as dynamic).name?.toString();
+        } catch (e) {
+          if (picData is Map) {
+            newPic = picData['name']?.toString() ?? picData['nama']?.toString();
+          }
+        }
+      }
+      newPic = newPic?.trim();
+
+      if (newPic != null && newPic.isNotEmpty) {
+        _picOverrides[cage.id] = newPic;
+      } else {
+        _picOverrides.remove(cage.id);
       }
 
       if (!mounted) return;
@@ -129,9 +160,10 @@ class _CageManagementState extends State<CageManagement> {
       );
     } catch (e) {
       if (!mounted) return;
+      final errorMessage = e.toString().replaceAll('Exception: ', '');
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Gagal memperbarui kandang: $e')));
+      ).showSnackBar(SnackBar(content: Text('Gagal memperbarui kandang: $errorMessage')));
     }
   }
 

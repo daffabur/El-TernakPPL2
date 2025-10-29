@@ -1,6 +1,9 @@
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/models/storage_model.dart';
+import 'package:el_ternak_ppl2/services/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 class StorageManagement extends StatefulWidget {
   const StorageManagement({super.key});
@@ -10,32 +13,21 @@ class StorageManagement extends StatefulWidget {
 }
 
 class _StorageManagementState extends State<StorageManagement> {
-  final List<Map<String, dynamic>> storageItems = [
-    {
-      'icon': Icons.grass, // ikon pupuk
-      'name': 'Pupuk',
-      'current': 70,
-      'total': 120,
-    },
-    {
-      'icon': Icons.water_drop, // ikon solar
-      'name': 'Solar',
-      'current': 50,
-      'total': 120,
-    },
-    {
-      'icon': Icons.assignment, // ikon OVK
-      'name': 'OVK',
-      'current': 50,
-      'total': 120,
-    },
-    {
-      'icon': Icons.eco, // ikon sekam
-      'name': 'Sekam',
-      'current': 80,
-      'total': 120,
-    },
-  ];
+  final StorageService _storageService = StorageService();
+  late Future<Storage> _storageFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    initializeDateFormatting('id_ID', null);
+    _loadStorageData();
+  }
+
+  void _loadStorageData() {
+    setState(() {
+      _storageFuture = _storageService.getStorageData();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,92 +57,151 @@ class _StorageManagementState extends State<StorageManagement> {
               ),
               const SizedBox(height: 24),
 
-              // === List Item Penyimpanan ===
               Expanded(
-                child: ListView.builder(
-                  itemCount: storageItems.length,
-                  itemBuilder: (context, index) {
-                    final item = storageItems[index];
-                    final double progress =
-                        item['current'] / item['total'].toDouble();
+                child: FutureBuilder<Storage>(
+                  future: _storageFuture,
+                  builder: (context, snapshot) {
+                    // 1. State Loading
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(top: 20, bottom: 20),
-                          padding: const EdgeInsets.only(top: 36, bottom: 48, left: 36, right: 36),
-                          decoration: BoxDecoration(
-                            color: AppStyles.highlightColor,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 6,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    // 2. State Error
+                    if (snapshot.hasError) {
+                      return Center(
+                          child: Text("Gagal memuat: ${snapshot.error}"));
+                    }
+
+                    // 3. State Data Tidak Ada
+                    if (!snapshot.hasData) {
+                      return const Center(
+                          child: Text("Data penyimpanan tidak ditemukan."));
+                    }
+
+                    // 4. State Sukses (Data Tersedia)
+                    final storage = snapshot.data!;
+
+                    final List<Map<String, dynamic>> dynamicStorageItems = [
+                      {
+                        "name": "Pakan",
+                        "used": storage.pakanUsed,
+                        "total": storage.pakanStock ,
+                        "icon": Icons.grass,
+                        "unit": "Kg"
+                      },
+                      {
+                        "name": "Solar",
+                        "used": storage.solarUsed,
+                        "total": storage.solarStock ,
+                        "icon": Icons.local_gas_station,
+                        "unit": "L"
+                      },
+                      {
+                        "name": "Sekam",
+                        "used": storage.sekamUsed,
+                        "total": storage.sekamStock,
+                        "icon": Icons.layers,
+                        "unit": "Kg"
+                      },
+                      {
+                        "name": "Obat",
+                        "used": storage.obatUsed,
+                        "total": storage.obatStock ,
+                        "icon": Icons.medical_services,
+                        "unit": "L"
+                      }
+                    ];
+
+                    return RefreshIndicator(
+                      onRefresh: () async => _loadStorageData(),
+                      child: ListView.builder(
+                        itemCount: dynamicStorageItems.length,
+                        itemBuilder: (context, index) {
+                          final item = dynamicStorageItems[index];
+
+                          // Hindari pembagian dengan nol jika totalnya 0
+                          final double progress = (item['total'] > 0)
+                              ? (item['used'] / item['total'].toDouble())
+                              : 0.0;
+
+                          // Tampilkan UI Card Anda dengan data dinamis
+                          return Stack(
+                            clipBehavior: Clip.none,
                             children: [
-                              Text(
-                                item['name'],
-                                style: GoogleFonts.poppins(
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                              Container(
+                                margin: const EdgeInsets.only(top: 20, bottom: 20),
+                                padding: const EdgeInsets.only(top: 36, bottom: 48, left: 36, right: 36),
+                                decoration: BoxDecoration(
+                                  color: AppStyles.highlightColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black12,
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item['name'],
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 30,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      // Gunakan unit yang sudah kita definisikan
+                                      "${item['used']} ${item['unit']} / ${item['total']} ${item['unit']}",
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: LinearProgressIndicator(
+                                        value: progress,
+                                        minHeight: 13,
+                                        backgroundColor: Colors.white,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                            AppStyles.IconCageCardColor),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              Text(
-                                "${item['current']}Kg / ${item['total']}Kg",
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: LinearProgressIndicator(
-                                  value: progress,
-                                  minHeight: 13,
-                                  backgroundColor: Colors.white,
-                                  valueColor:
-                                  AlwaysStoppedAnimation<Color>(
-                                      AppStyles.IconCageCardColor),
+                              Positioned(
+                                top: 0,
+                                left: 20,
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                            color:
+                                            Colors.black.withOpacity(0.2),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4))
+                                      ]),
+                                  child: Icon(
+                                    item['icon'],
+                                    color: const Color(0xFF2E7D32),
+                                    size: 32,
+                                  ),
                                 ),
                               ),
                             ],
-                          ),
-                        ),
-
-                        Positioned(
-                          top: 0, // Posisi dari atas Stack
-                          left: 20, // Posisi dari kiri Stack
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                // Tambahkan bayangan agar ikon lebih menonjol
-                                boxShadow: [
-                                  BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4)
-                                  )
-                                ]
-                            ),
-                            child: Icon(
-                              item['icon'],
-                              color: const Color(0xFF2E7D32),
-                              size: 32, // Sedikit diperbesar agar lebih terlihat
-                            ),
-                          ),
-                        ),
-                      ],
+                          );
+                        },
+                      ),
                     );
                   },
                 ),

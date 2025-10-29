@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-// Fungsi helper untuk mem-parsing seluruh response
+
 ApiResponse apiResponseFromJson(String str) => ApiResponse.fromJson(json.decode(str));
 
 class ApiResponse {
