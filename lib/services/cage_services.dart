@@ -6,7 +6,7 @@ import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/cage_model.dart';
 
 class CageService {
-  static const String _base = 'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api/';
+  static const String _base = 'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api';
   static const bool _debug = false;
 
   final _auth = AuthService();
@@ -59,9 +59,6 @@ class CageService {
   String _detail(int id) => '/kandang/$id';
   String _deleteAlt(int id) => '/kandang/delete/$id';
 
-  // ================= READ =================
-
-  /// Daftar kandang untuk ADMIN/PETINGGI (fallback /kandang/ -> /kandang).
   Future<List<Cage>> getAll() async {
     // coba A
     var r = await http.get(_u(_listAdminA), headers: await _headers());
@@ -77,10 +74,6 @@ class CageService {
     return _parseList(_safeDecode(r.body));
   }
 
-  /// Daftar kandang untuk PEGAWAI.
-  /// Strategi:
-  /// - Coba beberapa path (termasuk versi **dengan** dan **tanpa** trailing slash)
-  /// - Coba Authorization: Bearer → Raw token
   Future<List<Cage>> getForEmployee() async {
     final rawToken = await _auth.getToken();
     if (rawToken == null) {
@@ -145,18 +138,45 @@ class CageService {
   }
 
   // ================= CREATE =================
+// lib/services/cage_services.dart
+
+  // ================= CREATE (SUDAH DIPERBAIKI) =================
   Future<Cage> create(Map<String, dynamic> ui) async {
+    int? idPj;
+    final dynamic idPenanggungJawabValue = ui['idPenanggungJawab'];
+    if (idPenanggungJawabValue is List && idPenanggungJawabValue.isNotEmpty) {
+      idPj = _toInt(idPenanggungJawabValue.first);
+    } else if (idPenanggungJawabValue is int) {
+      idPj = idPenanggungJawabValue;
+    } else {
+      idPj = _toInt(idPenanggungJawabValue);
+    }
+    idPj ??= _toInt(ui['id_pj_kandang']);
+
+    if (idPj == null || idPj == 0) {
+      final dynamic picData = ui['pic'];
+      if (picData != null) {
+        try {
+          // Coba akses properti 'id' jika 'picData' adalah objek (misal: User)
+          idPj = _toInt((picData as dynamic).id);
+        } catch (_) {
+          // Jika gagal (mis. 'picData' adalah Map), coba akses sebagai Map
+          if (picData is Map) {
+            idPj = _toInt(picData['id']);
+          }
+        }
+      }
+    } // <-- KURUNG PENUTUP YANG HILANG DITAMBAHKAN DI SINI
+
+    // --- BLOK KODE INI DIPINDAHKAN KE LUAR DARI 'IF' ---
+    // Siapkan body untuk dikirim ke API
     final body = <String, dynamic>{
       'nama': (ui['nama'] ?? ui['name'] ?? ui['Nama'])?.toString(),
       'kapasitas': _toInt(ui['kapasitas'] ?? ui['capacity']),
-      if (ui['id_pj_kandang'] != null)
-        'id_pj_kandang': _toInt(ui['id_pj_kandang']),
-      if (ui['idPenanggungJawab'] != null)
-        'id_pj_kandang': _toInt(
-          (ui['idPenanggungJawab'] as List).isNotEmpty
-              ? ui['idPenanggungJawab'][0]
-              : null,
-        ),
+
+      // Kirim ke backend jika idPj valid (bukan null dan bukan 0)
+      if (idPj != null && idPj != 0) 'idPenanggungJawab': idPj,
+
       if (ui['status'] != null) 'status': ui['status'].toString().toLowerCase(),
     };
 
@@ -175,8 +195,9 @@ class CageService {
     final data = (_safeDecode(r.body) as Map?)?['data'];
     if (data is Map<String, dynamic>) return Cage.fromJson(data);
 
+    // Fallback jika respons tidak mengandung data, buat objek Cage dari input
     return Cage(
-      id: DateTime.now().millisecondsSinceEpoch,
+      id: DateTime.now().millisecondsSinceEpoch, // ID sementara
       name: (body['nama'] as String?) ?? '',
       capacity: body['kapasitas'] as int? ?? 0,
       population: 0,
@@ -185,7 +206,9 @@ class CageService {
       status: (ui['status']?.toString() ?? 'active'),
       notes: null,
     );
+    // --- AKHIR BLOK YANG DIPINDAHKAN ---
   }
+
 
   // ================= UPDATE =================
   Future<void> updateById(int id, Map<String, dynamic> ui) async {

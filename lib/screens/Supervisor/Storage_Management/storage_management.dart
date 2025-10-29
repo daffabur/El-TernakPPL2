@@ -12,19 +12,19 @@ class StorageManagement extends StatefulWidget {
 class _StorageManagementState extends State<StorageManagement> {
   final List<Map<String, dynamic>> storageItems = [
     {
-      'icon': Icons.grass, // ikon pupuk
+      'icon': Icons.grass,
       'name': 'Pupuk',
       'current': 70,
       'total': 120,
     },
     {
-      'icon': Icons.water_drop, // ikon solar
+      'icon': Icons.water_drop,
       'name': 'Solar',
       'current': 50,
       'total': 120,
     },
     {
-      'icon': Icons.assignment, // ikon OVK
+      'icon': Icons.assignment,
       'name': 'OVK',
       'current': 50,
       'total': 120,
@@ -32,7 +32,7 @@ class _StorageManagementState extends State<StorageManagement> {
     {
       'icon': Icons.eco, // ikon sekam
       'name': 'Sekam',
-      'current': 80,
+      'current': 120,
       'total': 120,
     },
   ];

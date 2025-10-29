@@ -1,11 +1,13 @@
 // lib/screens/Supervisor/Cage_Management/models/cage_model.dart
+import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/models/user_model.dart';
+
 class Cage {
   final int id;
   final String name;
   final int capacity;
   final int population;
   final int deaths;
-  final String? pic;
+  final User? pic;
   final String status;
   final String? notes;
 
@@ -55,13 +57,18 @@ class Cage {
     final deaths = _toInt(j['deaths'] ?? j['kematian'] ?? j['Kematian']);
 
     // pic: pic/penanggung_jawab/pj/PIC/PenanggungJawab
-    final pic =
-        (j['pic'] ??
-                j['penanggung_jawab'] ??
-                j['pj'] ??
-                j['PIC'] ??
-                j['PenanggungJawab'])
-            ?.toString();
+    User? picObject;
+    // Cari data pic dari berbagai kemungkinan key
+    final picData = j['pic'] ??
+        j['penanggung_jawab'] ??
+        j['pj'] ??
+        j['PIC'] ??
+        j['PenanggungJawab'];
+
+    // Jika data pic ditemukan dan merupakan sebuah Map, buat objek User darinya
+    if (picData is Map<String, dynamic>) {
+      picObject = User.fromJson(picData);
+    }
 
     // status: status/Status/aktif(boolean -> Aktif/Nonaktif)
     final status =
@@ -84,7 +91,7 @@ class Cage {
       capacity: capacity,
       population: population,
       deaths: deaths,
-      pic: pic,
+      pic: picObject,
       status: status,
       notes: notes,
     );
