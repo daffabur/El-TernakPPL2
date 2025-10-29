@@ -483,7 +483,7 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
                   Expanded(
                     child: _smallStatCard(
                       title: "Sekam Digunakan",
-                      value: "${cage.sekam} Kg",
+                      value: "${cage.sekam ?? 0} Kg",
                       asset: "assets/images/ic_sekam.svg",
                       assetScale: 0.15,
                     ),
@@ -492,7 +492,7 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
                   Expanded(
                     child: _smallStatCard(
                       title: "Solar Digunakan",
-                      value: "${cage.solar} L",
+                      value: "${cage.solar ?? 0} L",
                       asset: "assets/images/ic_solar.svg",
                       assetScale: 0.2,
                     ),
@@ -504,7 +504,7 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
 
               _wideStatCard(
                 title: "Konsumsi Pakan",
-                value: "${cage.pakan} Kg",
+                value: "${cage.pakan ?? 0} Kg",
                 asset: "assets/images/ic_pakan.svg",
                 assetScale: 0.25,
               ),
@@ -513,7 +513,7 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
 
               _wideStatCard(
                 title: "Obat",
-                value: "${cage.obat} L",
+                value: "${cage.obat ?? 0} L",
                 asset: "assets/images/ic_obat.svg",
                 assetScale: 0.2,
               ),

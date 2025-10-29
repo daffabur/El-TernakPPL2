@@ -7,8 +7,8 @@ class HomeScreen extends StatelessWidget {
 
   void _logout(BuildContext context) {
     Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-      (route) => false,
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+          (Route<dynamic> route) => false,
     );
   }
 

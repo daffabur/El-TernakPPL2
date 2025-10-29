@@ -225,10 +225,10 @@ packages:
     dependency: transitive
     description:
       name: image_picker_android
-      sha256: "58a85e6f09fe9c4484d53d18a0bd6271b72c53fce1d05e6f745ae36d8c18efca"
+      sha256: ca2a3b04d34e76157e9ae680ef16014fb4c2d20484e78417eaed6139330056f6
       url: "https://pub.dev"
     source: hosted
-    version: "0.8.13+5"
+    version: "0.8.13+7"
   image_picker_for_web:
     dependency: transitive
     description:
@@ -349,6 +349,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
+  nested:
+    dependency: transitive
+    description:
+      name: nested
+      sha256: "03bac4c528c64c95c722ec99280375a6f2fc708eec17c7b3f07253b626cd2a20"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   path:
     dependency: transitive
     description:
@@ -437,6 +445,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
+  provider:
+    dependency: "direct main"
+    description:
+      name: provider
+      sha256: "4e82183fa20e5ca25703ead7e05de9e4cceed1fbd1eadc1ac3cb6f565a09f272"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.1.5+1"
   shared_preferences:
     dependency: "direct main"
     description:

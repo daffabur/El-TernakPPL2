@@ -4,13 +4,17 @@ import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
-/// Home page untuk Pegawai (KONTEN SAJA).
-/// Navbar dikelola oleh BottomNavBarPeg.
+
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final VoidCallback onLogout;
+  const HomeScreen({
+    super.key,
+    required this.onLogout, // Jadikan wajib diisi
+  });
 
-  // --- Dummy data (silakan sambungkan ke BE nanti) ---
+
   String get _employeeName => 'Ehsan Bin Mail';
   int get _hariKe => 1;
   bool get _sudahInputHariIni => false;
@@ -46,13 +50,12 @@ class HomeScreen extends StatelessWidget {
     );
     if (ok != true) return;
 
-    final auth = AuthService();
-    await auth.saveToken('');
+    final authService = context.read<AuthService>();
 
-    if (!context.mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-      (route) => false,
+    authService.logout();
+    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+          (Route<dynamic> route) => false,
     );
   }
 

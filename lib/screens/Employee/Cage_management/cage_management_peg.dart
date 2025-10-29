@@ -156,7 +156,7 @@ class _CageManagementPegState extends State<CageManagementPeg> {
                           MaterialPageRoute(
                             builder: (_) => CustomDetailCagePeg(cage: cage),
                             settings: RouteSettings(
-                              name: 'emp/cage/detail/${cage.id ?? 'unknown'}',
+                              name: 'emp/cage/detail/${cage.id }',
                             ),
                           ),
                         )

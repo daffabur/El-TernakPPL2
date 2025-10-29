@@ -95,20 +95,17 @@ class CageService {
   /// Admin/Supervisor – ambil semua kandang
   Future<List<Cage>> getAll() async {
     final r = await http
-        .get(_u('kandang'), headers: await _headers())
+        .get(_u('kandang/'), headers: await _headers())
         .timeout(_timeout);
-    _log('GET /kandang -> ${r.statusCode}');
+    _log('GET /kandang/ -> ${r.statusCode}');
     if (r.statusCode != 200) {
-      _throwHttp('GET /kandang', r);
+      _throwHttp('GET /kandang/', r);
     }
     return _parseList(_safeDecode(r.body));
   }
 
-  /// Pegawai – ambil 1 kandang yang jadi tanggung jawabnya.
-  /// Mengembalikan list berisi 1 item (atau kosong bila pegawai belum punya kandang).
   Future<List<Cage>> getForEmployee() async {
     try {
-      // 1) Ambil profile untuk kandang_id
       final prof = await http
           .get(_u('account/me'), headers: await _headers())
           .timeout(_timeout);
@@ -199,9 +196,9 @@ class CageService {
     };
 
     final r = await http
-        .post(_u('kandang'), headers: await _headers(), body: jsonEncode(body))
+        .post(_u('kandang/create'), headers: await _headers(), body: jsonEncode(body))
         .timeout(_timeout);
-    _log('POST /kandang -> ${r.statusCode} ${r.body}');
+    _log('POST /kandang/create -> ${r.statusCode} ${r.body}');
 
     if (r.statusCode != 201 && r.statusCode != 200) {
       final m = (_safeDecode(r.body) as Map?)?['message']?.toString();

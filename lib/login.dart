@@ -3,6 +3,7 @@ import 'package:el_ternak_ppl2/screens/Employee/bottom_nav_bar_peg.dart';
 import 'package:el_ternak_ppl2/services/api_service.dart';
 import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 // Navbar supervisor (atasan)
 import 'package:el_ternak_ppl2/base/bottom_nav_bar.dart';
@@ -24,7 +25,6 @@ class _LoginPageState extends State<LoginPage> {
   bool _isSubmitting = false;
 
   final ApiService _apiService = ApiService();
-  final AuthService _authService = AuthService();
 
   static const Color orange = Color(0xFFFF7A00);
   static const Color orangeSoft = Color(0xFFFFC766);
@@ -85,50 +85,55 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   // === LOGIN ===
-  Future<void> _doLogin() async {
-    if (_isSubmitting) return;
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _doLogin() async {if (_isSubmitting) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isSubmitting = true);
+  setState(() => _isSubmitting = true);
 
-    try {
-      // 1) minta token
-      final token = await _apiService.login(
-        _username.text.trim(),
-        _password.text,
-      );
+  try {
+    // 1) Minta token dari API
+    final token = await _apiService.login(
+      _username.text.trim(),
+      _password.text,
+    );
 
-      // 2) simpan token
-      await _authService.saveToken(token);
+    // --- PERBAIKAN: Pindahkan Logika Role ke Atas ---
+    // 2) Baca role dari payload JWT SEBELUM menyimpan
+    final payload = _decodeJwtPayload(token);
+    final role = _mapRoleFromPayload(payload);
 
-      // 3) baca role dari payload JWT
-      final payload = _decodeJwtPayload(token);
-      final role = _mapRoleFromPayload(payload);
-
-      if (role == UserRole.unknown) {
-        throw Exception('User role tidak ditemukan pada token.');
-      }
-
-      if (!mounted) return;
-
-      // 4) arahkan sesuai role
-      if (role == UserRole.pegawai) {
-        // <-- PENTING: arahkan ke NAVBAR PEGAWAI supaya bar-nya muncul
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const BottomNavBarPeg()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const BottomNavBar()),
-        );
-      }
-    } catch (e) {
-      _showSnack(e.toString().replaceAll('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+    if (role == UserRole.unknown) {
+      throw Exception('User role tidak ditemukan pada token.');
     }
+    // --- AKHIR PERBAIKAN URUTAN ---
+
+
+    // 3) Simpan token DAN role menggunakan Provider
+    if (mounted) {
+      // PERBAIKAN: Berikan kedua argumen yang dibutuhkan
+      await Provider.of<AuthService>(context, listen: false).login(token, role.name);
+    }
+
+    // 4) Arahkan sesuai role (logika navigasi manual ini bisa Anda simpan atau hapus
+    // jika Anda sudah percaya 100% pada Consumer di main.dart)
+    if (!mounted) return;
+    if (role == UserRole.pegawai) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const BottomNavBarPeg()),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const BottomNavBar()),
+      );
+    }
+
+  } catch (e) {
+    _showSnack(e.toString().replaceAll('Exception: ', ''));
+  } finally {
+    if (mounted) setState(() => _isSubmitting = false);
+  }
   }
 
   InputDecoration _roundedInput(String label) => InputDecoration(

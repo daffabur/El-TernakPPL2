@@ -6,7 +6,16 @@ import 'package:http/http.dart' as http;
 class ReportService {
   final String _baseUrl = 'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api';
   final _auth = AuthService();
-
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _auth.getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Token tidak ditemukan. Silakan login ulang.');
+    }
+    return {
+      'Content-Type': 'application/json; charset=UTF-8',
+      'Authorization': 'Bearer $token', // Sesuaikan jika format token berbeda
+    };
+  }
   Future<List<Report>> getByCageId(int cageId) async {
     final token = await _auth.getToken();
     if (token == null) throw Exception('Token not found');
@@ -65,6 +74,35 @@ class ReportService {
       final body = jsonDecode(response.body);
       final message = body['message'] ?? 'Gagal mengambil detail laporan';
       throw Exception('$message (Status: ${response.statusCode})');
+    }
+  }
+  Future<void> updateReport(int reportId, Map<String, dynamic> data) async {
+    // Siapkan payload sesuai format yang diminta backend
+    final payload = {
+      // Gunakan null-aware operator untuk keamanan
+      "rata_bobot_ayam": data['rata_bobot_ayam'],
+      "kematian_ayam": data['kematian_ayam'],
+      "pakan_used": data['pakan_used'],
+      "solar_used": data['solar_used'],
+      "sekam_used": data['sekam_used'],
+      "obat_used": data['obat_used'],
+    };
+
+    final response = await http.patch(
+      Uri.parse('$_baseUrl/laporan/$reportId'),
+      headers: await _getHeaders(),
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      // Sukses
+      print('Laporan dengan ID $reportId berhasil diperbarui.');
+      return;
+    } else {
+      // Gagal
+      final errorBody = jsonDecode(response.body);
+      final errorMessage = errorBody['message'] ?? 'Gagal memperbarui laporan.';
+      throw Exception('Error ${response.statusCode}: $errorMessage');
     }
   }
 }
