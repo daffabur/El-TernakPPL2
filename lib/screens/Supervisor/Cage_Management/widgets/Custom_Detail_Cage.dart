@@ -6,6 +6,7 @@ import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/widgets/Custom
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/widgets/custom_report_history.dart';
 import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:el_ternak_ppl2/services/cage_services.dart';
+import 'package:el_ternak_ppl2/services/report_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,7 +17,6 @@ import 'package:el_ternak_ppl2/screens/Supervisor/Home_Screen/home_screen.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/money_management.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/cage_management.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/account_management.dart';
-import 'package:el_ternak_ppl2/services/report_service.dart';
 
 class CustomDetailCage extends StatefulWidget {
   final Cage cage;
@@ -46,6 +46,7 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
   @override
   void initState() {
     super.initState();
+    _cage = widget.cage;
     _loadDetail();
   }
 
@@ -532,7 +533,8 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
                   OutlinedButton(
                       onPressed: (){
                         Navigator.push(
-                          context, MaterialPageRoute(builder: (context) => const ReportHistoryScreen()),
+                          context, MaterialPageRoute(builder: (context) => ReportHistoryScreen(cageId: cage.id,
+                          cageName: cage.name,)),
                         );
                       },
                       style: OutlinedButton.styleFrom(
@@ -551,37 +553,45 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
                 ],
               ),
               const SizedBox(height: 16),
-              Column(
-                children: [
-                 CustomReportcard(
-                     date: "12 April 2024",
-                     details: "Bobot: 1.3 kg | Mati: 4 | Pakan: 120 kg",
-                     time: "09.10",
-                     onTap: () {
-                       print("Report card 1 tapped!");
-                     }),
-                  CustomReportcard(
-                      date: "12 April 2024",
-                      details: "Bobot: 1.3 kg | Mati: 4 | Pakan: 120 kg",
-                      time: "09.10",
-                      onTap: () {
-                        print("Report card 1 tapped!");
-                      }),
-                  CustomReportcard(
-                      date: "12 April 2024",
-                      details: "Bobot: 1.3 kg | Mati: 4 | Pakan: 120 kg",
-                      time: "09.10",
-                      onTap: () {
-                        print("Report card 1 tapped!");
-                      }),
-                  CustomReportcard(
-                      date: "12 April 2024",
-                      details: "Bobot: 1.3 kg | Mati: 4 | Pakan: 120 kg",
-                      time: "09.10",
-                      onTap: () {
-                        print("Report card 1 tapped!");
-                      })
-                ],
+              _loading
+                  ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+                  : _reports.isEmpty
+                  ? Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 40.0),
+                alignment: Alignment.center,
+                child: Column(
+                  children: [
+                    Icon(Icons.receipt_long_rounded, color: Colors.grey.shade300, size: 48),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Belum ada laporan terbaru",
+                      style: GoogleFonts.poppins(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              )
+                  : Column(
+                children: _reports
+                    .take(4)
+                    .map((report) {
+                  return CustomReportcard(
+                    date: report.tanggal,
+                    time: report.jam,
+                    details: "Bobot: ${report.bobot} kg | Mati: ${report.mati} | Pakan: ${report.pakan} kg",
+                    onTap: () {
+                      print("Report card ID: ${report.id} tapped!");
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Dicatat oleh: ${report.pencatat}'))
+                      );
+                    },
+                  );
+                }).toList(),
               ),
               SafeArea(
                 top: false,

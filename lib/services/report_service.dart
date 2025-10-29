@@ -11,28 +11,31 @@ class ReportService {
     final token = await _auth.getToken();
     if (token == null) throw Exception('Token not found');
 
-    final uri = Uri.parse('$_baseUrl/laporan/$cageId');
+    final uri = Uri.parse('$_baseUrl/laporan?kandang=$cageId');
     final response = await http.get(
       uri,
       headers: {
         'Authorization': token,
         'Content-Type': 'application/json; charset=UTF-8',
+        'Accept': 'application/json',
       },
     );
 
     if (response.statusCode == 200) {
+      // Decode body JSON
       final body = jsonDecode(response.body);
-      final data = body['data'];
 
-      if (data is List) {
-        return data.map((item) => Report.fromJson(item as Map<String, dynamic>)).toList();
-      } else if (data is Map<String, dynamic>) {
-        return [Report.fromJson(data)];
-      } else {
-        return [];
-      }
+      // Ambil list 'data' dari body JSON
+      final List<dynamic> data = body['data'];
+
+      // Ubah setiap item di list JSON menjadi objek Report menggunakan Report.fromJson
+      // dan kembalikan sebagai List<Report>
+      return data.map((item) => Report.fromJson(item as Map<String, dynamic>)).toList();
     } else {
-      throw Exception('Gagal mengambil data laporan (Status: ${response.statusCode})');
+      // Jika server tidak merespons dengan status 200 OK, lempar error
+      final body = jsonDecode(response.body);
+      final message = body['message'] ?? 'Gagal mengambil data laporan';
+      throw Exception('$message (Status: ${response.statusCode})');
     }
   }
 }
