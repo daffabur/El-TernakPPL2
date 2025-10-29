@@ -1,16 +1,17 @@
-// lib/base/bottom_nav_bar_peg.dart
+// lib/screens/Employee/bottom_nav_bar_peg.dart
 import 'package:flutter/material.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/material_symbols.dart';
 import 'package:iconify_flutter/icons/healthicons.dart';
 
-// Tab konten
+// Tab pages
 import 'package:el_ternak_ppl2/screens/Employee/Home_Screen/home_screen.dart';
 import 'package:el_ternak_ppl2/screens/Employee/Cage_management/cage_management_peg.dart';
 
-/// Bottom navbar versi Pegawai:
-/// - Kiri: Home
-/// - Kanan: Kandang (ikon ayam)
+/// Bottom navbar versi Pegawai dengan nested navigators.
+/// - Navbar ini menjadi ROOT (Scaffold tunggal).
+/// - Tiap tab punya Navigator sendiri, sehingga push ke detail
+///   TETAP menampilkan navbar ini (tidak perlu taruh navbar di halaman lain).
 class BottomNavBarPeg extends StatefulWidget {
   const BottomNavBarPeg({super.key});
 
@@ -21,64 +22,108 @@ class BottomNavBarPeg extends StatefulWidget {
 class _BottomNavBarPegState extends State<BottomNavBarPeg> {
   int _selectedIndex = 0;
 
-  // Menjaga state/scroll per tab
-  final PageStorageBucket _bucket = PageStorageBucket();
+  // Navigator keys per tab
+  final _homeNavKey = GlobalKey<NavigatorState>();
+  final _cageNavKey = GlobalKey<NavigatorState>();
+  late final List<GlobalKey<NavigatorState>> _navKeys;
 
-  // Halaman untuk 2 tab
-  late final List<Widget> _pages = const [
-    HomeScreen(key: PageStorageKey('emp_home_tab')),
-    CageManagementPeg(key: PageStorageKey('emp_cage_tab')),
-  ];
-
-  void _onItemTapped(int index) {
-    if (_selectedIndex == index) return;
-    setState(() => _selectedIndex = index);
+  @override
+  void initState() {
+    super.initState();
+    _navKeys = [_homeNavKey, _cageNavKey];
   }
 
-  // Warna
+  Future<bool> _onWillPop() async {
+    final currentNav = _navKeys[_selectedIndex].currentState!;
+    if (currentNav.canPop()) {
+      currentNav.pop();
+      return false; // cegah keluar app, pop di tab dulu
+    }
+    // Kalau di root route tab & bukan tab Home, balik ke Home dulu
+    if (_selectedIndex != 0) {
+      setState(() => _selectedIndex = 0);
+      return false;
+    }
+    return true; // izinkan sistem keluar app
+  }
+
+  void _onItemTapped(int index) {
+    if (_selectedIndex == index) {
+      // Jika tab sama & bisa pop, pop ke root tab
+      final nav = _navKeys[index].currentState!;
+      while (nav.canPop()) {
+        nav.pop();
+      }
+    } else {
+      setState(() => _selectedIndex = index);
+    }
+  }
+
+  // Navigator per tab
+  Widget _buildTabNavigator({
+    required GlobalKey<NavigatorState> key,
+    required Widget root,
+  }) {
+    return Navigator(
+      key: key,
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute(builder: (_) => root, settings: settings);
+      },
+    );
+  }
+
+  // ---------- UI ----------
   final Color _selectedIconColor = const Color(0xFF3E7B27);
   final Color _unselectedIconColor = const Color(0xFF3E7B27);
   final Color _selectedBg = const Color(0xFF3E7B27);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // IndexedStack menjaga state setiap tab
-      body: PageStorage(
-        bucket: _bucket,
-        child: IndexedStack(index: _selectedIndex, children: _pages),
-      ),
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        // IndexedStack supaya state tiap tab terjaga
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: [
+            _buildTabNavigator(key: _homeNavKey, root: const HomeScreen()),
+            _buildTabNavigator(
+              key: _cageNavKey,
+              root: const CageManagementPeg(),
+            ),
+          ],
+        ),
 
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.only(bottom: 8),
-        child: Container(
-          height: 70, // fixed height supaya tidak “melar”
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 32),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(50),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                spreadRadius: 1,
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          // Home kiri — Ayam kanan
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildNavItem(MaterialSymbols.home, "Home", 0),
-              _buildNavItem(
-                Healthicons.animal_chicken,
-                "Kandang",
-                1,
-                alignRight: true,
-              ),
-            ],
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.only(bottom: 8),
+          child: Container(
+            height: 70,
+            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 32),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(50),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  spreadRadius: 1,
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildNavItem(MaterialSymbols.home, "Home", 0),
+                _buildNavItem(
+                  Healthicons.animal_chicken,
+                  "Kandang",
+                  1,
+                  alignRight: true,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -109,7 +154,7 @@ class _BottomNavBarPegState extends State<BottomNavBarPeg> {
           ),
           decoration: isSelected
               ? BoxDecoration(
-                  color: _selectedBg.withOpacity(0.10),
+                  color: _selectedBg.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(999),
                 )
               : const BoxDecoration(),

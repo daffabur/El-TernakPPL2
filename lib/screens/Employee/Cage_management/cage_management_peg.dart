@@ -6,7 +6,6 @@ import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/services/cage_services.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/cage_model.dart';
 
-// Kartu dan halaman detail versi pegawai
 import 'widgets/custom_card_cage_peg.dart';
 import 'widgets/custom_detail_cage_peg.dart';
 
@@ -24,12 +23,22 @@ class _CageManagementPegState extends State<CageManagementPeg> {
   @override
   void initState() {
     super.initState();
-    _future = _service.getForEmployee();
+    _future = _loadCages();
+  }
+
+  Future<List<Cage>> _loadCages() async {
+    // Pastikan method servicemu mengembalikan Future<List<Cage>>
+    return _service.getForEmployee();
   }
 
   Future<void> _reload() async {
-    setState(() => _future = _service.getForEmployee());
-    await _future;
+    setState(() => _future = _loadCages());
+    try {
+      await _future;
+    } catch (_) {
+      // biarkan FutureBuilder yang menampilkan error
+    }
+    if (!mounted) return;
   }
 
   @override
@@ -55,17 +64,18 @@ class _CageManagementPegState extends State<CageManagementPeg> {
         child: FutureBuilder<List<Cage>>(
           future: _future,
           builder: (context, snap) {
-            // Loading
+            // ===== Loading =====
             if (snap.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            // Error
+            // ===== Error =====
             if (snap.hasError) {
-              final msg = snap.error.toString();
+              final msg = (snap.error ?? '').toString();
+              final lower = msg.toLowerCase();
               final is403 =
-                  msg.contains('403') ||
-                  msg.toLowerCase().contains('forbidden');
+                  lower.contains('403') || lower.contains('forbidden');
+
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(
@@ -101,7 +111,7 @@ class _CageManagementPegState extends State<CageManagementPeg> {
 
             final items = snap.data ?? const <Cage>[];
 
-            // Kosong
+            // ===== Empty =====
             if (items.isEmpty) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -129,30 +139,30 @@ class _CageManagementPegState extends State<CageManagementPeg> {
               );
             }
 
-            // List kandang
+            // ===== List kandang =====
             return ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(
-                16,
-                8,
-                16,
-                24,
-              ), // napas kanan-kiri
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               itemCount: items.length,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, i) {
                 final cage = items[i];
                 return CustomCardCagePeg(
                   cage: cage,
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => CustomDetailCagePeg(cage: cage),
-                      ),
-                    );
-                    // selesai dari detail → refresh list
-                    _reload();
+                  onTap: () {
+                    // Dorong ke halaman detail (push biasa, bukan replacement)
+                    Navigator.of(context)
+                        .push(
+                          MaterialPageRoute(
+                            builder: (_) => CustomDetailCagePeg(cage: cage),
+                            settings: RouteSettings(
+                              name: 'emp/cage/detail/${cage.id ?? 'unknown'}',
+                            ),
+                          ),
+                        )
+                        .then((_) {
+                          if (mounted) _reload(); // refresh setelah kembali
+                        });
                   },
                 );
               },

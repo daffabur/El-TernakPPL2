@@ -1,13 +1,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.el_ternak_ppl2">
 
+    <!-- 🚀 Tambahkan izin internet di level manifest -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
-        android:label="el_ternak_ppl2"
         android:name="${applicationName}"
+        android:label="el_ternak_ppl2"
         android:icon="@mipmap/ic_launcher"
+
+        <!-- 🚀 Izinkan akses HTTP non-SSL -->
         android:usesCleartextTraffic="true"
+
+        <!-- optional kalau masih ada legacy storage -->
         android:requestLegacyExternalStorage="true">
-        >   <!-- 🚀 ini penting untuk API http -->
 
         <activity
             android:name=".MainActivity"
@@ -34,6 +40,7 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
     </application>
 
     <!-- Required to query activities that can process text -->
