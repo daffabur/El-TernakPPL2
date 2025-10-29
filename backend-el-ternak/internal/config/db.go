@@ -28,7 +28,7 @@ func ConnectDB() {
 		log.Fatal("Gagal tersambung ke Database: ", err)
 	}
 
-	fmt.Println("Berhasil terhubung ke database")
+	log.Println("Berhasil terhubung ke database")
 
 	err = DB.AutoMigrate(
 		&models.Laporan{},
@@ -42,5 +42,5 @@ func ConnectDB() {
 		log.Fatal("Gagal migrasi database", err)
 	}
 
-	fmt.Println("Berhasil migrasi database")
+	log.Println("Berhasil migrasi database")
 }
