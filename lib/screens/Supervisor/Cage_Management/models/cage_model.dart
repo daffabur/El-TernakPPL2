@@ -10,6 +10,10 @@ class Cage {
   final User? pic;
   final String status;
   final String? notes;
+  final int pakan;
+  final int solar;
+  final int sekam;
+  final int obat;
 
   Cage({
     required this.id,
@@ -20,6 +24,10 @@ class Cage {
     this.pic,
     required this.status,
     this.notes,
+    required this.pakan,
+    required this.solar,
+    required this.sekam,
+    required this.obat,
   });
 
   // Helper konversi aman -> int
@@ -94,6 +102,10 @@ class Cage {
       pic: picObject,
       status: status,
       notes: notes,
+      pakan: _toInt(j['pakan']),
+      solar: _toInt(j['solar']),
+      sekam: _toInt(j['sekam']),
+      obat: _toInt(j['obat']),
     );
   }
 

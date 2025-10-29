@@ -157,6 +157,10 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
               pic: null,
               status: '',
               notes: null,
+              pakan: 0,
+              solar: 0,
+              sekam: 0,
+              obat: 0,
             ),
           );
           if (fromList.id != -1) {

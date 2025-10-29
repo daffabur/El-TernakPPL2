@@ -205,6 +205,10 @@ class CageService {
       pic: null,
       status: (ui['status']?.toString() ?? 'active'),
       notes: null,
+      pakan: 0,
+      solar: 0,
+      sekam: 0,
+      obat: 0,
     );
     // --- AKHIR BLOK YANG DIPINDAHKAN ---
   }
