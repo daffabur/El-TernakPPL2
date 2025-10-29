@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Home page untuk Pegawai (dipakai oleh BottomNavBarPeg)
+/// Home page untuk Pegawai (KONTEN SAJA).
+/// Navbar dikelola oleh BottomNavBarPeg.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -25,7 +26,6 @@ class HomeScreen extends StatelessWidget {
   int get _totalPopulasi => 8000;
   int get _totalKematian => 1000;
 
-  // ===== Logout helper =====
   Future<void> _handleLogout(BuildContext context) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -46,7 +46,6 @@ class HomeScreen extends StatelessWidget {
     );
     if (ok != true) return;
 
-    // Bersihkan token (pakai saveToken('') agar kompatibel dengan AuthService kamu)
     final auth = AuthService();
     await auth.saveToken('');
 
@@ -63,8 +62,6 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-
-      // AppBar putih tipis + tombol logout di kanan atas
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -104,10 +101,8 @@ class HomeScreen extends StatelessWidget {
       body: SafeArea(
         top: false,
         child: RefreshIndicator(
-          onRefresh: () async {
-            // TODO: tarik ulang data dari BE
-            await Future<void>.delayed(const Duration(milliseconds: 500));
-          },
+          onRefresh: () async =>
+              Future<void>.delayed(const Duration(milliseconds: 500)),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -133,7 +128,6 @@ class HomeScreen extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      // Hari ke + title + status
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,7 +192,6 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // tombol panah
                       Material(
                         color: green,
                         borderRadius: BorderRadius.circular(12),
@@ -235,7 +228,6 @@ class HomeScreen extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      // baris tanggal & jam
                       Row(
                         children: [
                           Text(
@@ -256,7 +248,6 @@ class HomeScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      // 4 kolom metrik
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -272,7 +263,7 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                // ===== 2 kartu kecil (Total Populasi & Total Kematian) =====
+                // ===== 2 kartu kecil =====
                 Row(
                   children: [
                     Expanded(
@@ -289,7 +280,7 @@ class HomeScreen extends StatelessWidget {
                         title: 'Total Kematian',
                         value: _totalKematian.toString(),
                         tag: 'Kandang 1',
-                        asset: 'assets/images/ic_obat.svg', // contoh icon
+                        asset: 'assets/images/ic_obat.svg',
                       ),
                     ),
                   ],
@@ -297,7 +288,7 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                // ===== Placeholder chart kotak besar =====
+                // ===== Placeholder chart =====
                 Container(
                   height: 325,
                   width: double.infinity,
@@ -322,27 +313,24 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // ===== Widgets kecil =====
-
-  Widget _metricItem(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
+  // ===== Helpers kecil =====
+  Widget _metricItem(String label, String value) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        value,
+        style: GoogleFonts.poppins(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
         ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
 
   Widget _smallTotalCard({
     required String title,
@@ -358,7 +346,6 @@ class HomeScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       child: Stack(
         children: [
-          // ilustrasi di kanan bawah (opsional)
           Positioned(
             right: -4,
             bottom: -6,
@@ -367,11 +354,9 @@ class HomeScreen extends StatelessWidget {
               child: SvgPicture.asset(asset, width: 52, height: 52),
             ),
           ),
-          // konten
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // tag kecil kanan atas
               Row(
                 children: [
                   Container(

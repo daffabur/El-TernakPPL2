@@ -9,6 +9,12 @@ class Cage {
   final String status;
   final String? notes;
 
+  // ===== tambahan: ringkasan konsumsi dari BE =====
+  final num? pakan; // kg
+  final num? solar; // L
+  final num? sekam; // kg
+  final num? obat; // L
+
   Cage({
     required this.id,
     required this.name,
@@ -18,11 +24,20 @@ class Cage {
     this.pic,
     required this.status,
     this.notes,
+    this.pakan,
+    this.solar,
+    this.sekam,
+    this.obat,
   });
 
-  // Helper konversi aman -> int
+  // Helpers
   static int _toInt(dynamic v) =>
       v is int ? v : int.tryParse(v?.toString() ?? '0') ?? 0;
+  static num? _toNum(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v;
+    return num.tryParse(v.toString());
+  }
 
   factory Cage.fromJson(Map<String, dynamic> j) {
     // id: id/kandang_id/ID/Id/id_kandang
@@ -35,26 +50,25 @@ class Cage {
         (j['name'] ?? j['nama'] ?? j['nama_kandang'] ?? j['Nama'] ?? '')
             .toString();
 
-    // capacity: capacity/kapasitas/Kapasitas
+    // capacity
     final capacity = _toInt(j['capacity'] ?? j['kapasitas'] ?? j['Kapasitas']);
 
-    // population:
-    // BE bisa pakai berbagai nama
+    // population
     final population = _toInt(
       j['population'] ??
           j['populasi'] ??
           j['jumlah_populasi'] ??
           j['Populasi'] ??
           j['JumlahAyam'] ??
-          j['jumlah_ayam'] ?? // tambahan
-          j['total_ayam'] ?? // tambahan
-          j['current_population'], // tambahan
+          j['jumlah_ayam'] ??
+          j['total_ayam'] ??
+          j['current_population'],
     );
 
-    // deaths: deaths/kematian/Kematian
+    // deaths
     final deaths = _toInt(j['deaths'] ?? j['kematian'] ?? j['Kematian']);
 
-    // pic: pic/penanggung_jawab/pj/PIC/PenanggungJawab
+    // pic
     final pic =
         (j['pic'] ??
                 j['penanggung_jawab'] ??
@@ -63,7 +77,7 @@ class Cage {
                 j['PenanggungJawab'])
             ?.toString();
 
-    // status: status/Status/aktif(boolean -> Aktif/Nonaktif)
+    // status
     final status =
         (j['status'] ??
                 j['Status'] ??
@@ -75,8 +89,14 @@ class Cage {
             ?.toString() ??
         'Aktif';
 
-    // notes: notes/catatan/Catatan
+    // notes
     final notes = (j['notes'] ?? j['catatan'] ?? j['Catatan'])?.toString();
+
+    // ===== map empat field tambahan persis dari BE =====
+    final pakan = _toNum(j['pakan']);
+    final solar = _toNum(j['solar']);
+    final sekam = _toNum(j['sekam']);
+    final obat = _toNum(j['obat']);
 
     return Cage(
       id: id,
@@ -87,6 +107,10 @@ class Cage {
       pic: pic,
       status: status,
       notes: notes,
+      pakan: pakan,
+      solar: solar,
+      sekam: sekam,
+      obat: obat,
     );
   }
 
@@ -99,5 +123,14 @@ class Cage {
     'pic': pic,
     'status': status,
     'notes': notes,
+    if (pakan != null) 'pakan': pakan,
+    if (solar != null) 'solar': solar,
+    if (sekam != null) 'sekam': sekam,
+    if (obat != null) 'obat': obat,
   };
+
+  @override
+  String toString() =>
+      'Cage(id:$id name:$name cap:$capacity pop:$population deaths:$deaths '
+      'pakan:$pakan solar:$solar sekam:$sekam obat:$obat status:$status)';
 }
