@@ -88,17 +88,83 @@ func GetLaporanByID(laporan_id uint) (*models.LaporanDetail, error) {
 }
 
 func UpdateLaporanByID(laporan_id uint, newData map[string]interface{}) error {
-	result := config.DB.Debug().Model(&models.Laporan{}).Where("id = ?", laporan_id).Updates(newData)
-
-	if result.Error != nil {
-		return result.Error
+	tx := config.DB.Begin()
+	
+	//ambil laporan lama
+	var old_laporan models.Laporan
+	if err := tx.First(&old_laporan, "id = ?", laporan_id).Error; err != nil {
+		tx.Rollback()
+		return err
 	}
 
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("not found")
+	//update laporan
+	if err := tx.Model(&models.Laporan{}).Where("id = ?", laporan_id).Updates(newData).Error; err != nil {
+		tx.Rollback()
+		return err
 	}
 
-	return  nil
+	//ambil data setelah di update
+	var new_laporan models.Laporan
+	if err := tx.First(&new_laporan, "id = ?", laporan_id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	//buat selisih setiap laporan
+	diff := models.Laporan {
+		Kematian_ayam: new_laporan.Kematian_ayam - old_laporan.Kematian_ayam,
+		Pakan_used: new_laporan.Pakan_used - old_laporan.Pakan_used,
+		Obat_used: new_laporan.Obat_used - old_laporan.Obat_used,
+		Sekam_used: new_laporan.Sekam_used - old_laporan.Sekam_used,
+		Solar_used: new_laporan.Solar_used - old_laporan.Solar_used,
+	}
+
+	fmt.Print(diff.Kematian_ayam, diff.Pakan_used, diff.Obat_used, diff.Sekam_used, diff.Solar_used)
+
+	//ambil data storage
+	var storage models.Storage
+	if err := tx.First(&storage, 1).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	//update data storage
+	storage.Pakan_used += diff.Pakan_used
+	storage.Obat_used += diff.Obat_used
+	storage.Solar_used += diff.Solar_used
+	storage.Sekam_used += diff.Sekam_used
+
+	storage.Pakan_stock -= diff.Pakan_used
+	storage.Obat_stock -= diff.Obat_used
+	storage.Solar_stock -= diff.Solar_used
+	storage.Sekam_stock -= diff.Sekam_used
+
+	if err := tx.Save(&storage).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	//ambil data kandang
+	var kandang models.Kandang
+	if err := tx.First(&kandang, new_laporan.KandangID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	//update data kandang
+	kandang.Kematian += diff.Kematian_ayam
+	kandang.Populasi -= diff.Kematian_ayam
+	kandang.Konsumsi_pakan += diff.Pakan_used
+	kandang.Solar += diff.Solar_used
+	kandang.Sekam += diff.Sekam_used
+	kandang.Obat += diff.Obat_used
+
+	if err := tx.Save(&kandang).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
 }
 
 func DeleteLaporanByID(laporan_id uint) error {
