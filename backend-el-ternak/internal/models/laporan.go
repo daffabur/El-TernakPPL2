@@ -11,9 +11,11 @@ type Laporan struct {
 	Rata_bobot_ayam float32
 	Kematian_ayam int 
 	Pakan_used int
+	Pakan_tipe string
+	Obat_used int
+	Obat_tipe string
 	Solar_used int
 	Sekam_used int
-	Obat_used int
 }
 
 type LaporanSummary struct {

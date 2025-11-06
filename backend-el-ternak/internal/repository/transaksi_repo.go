@@ -51,8 +51,6 @@ func CreateTransaksi(transaksi *models.Transaksi, kategori *string) error {
 				tx.Rollback()
 				return err
 			}
-		case "solar":
-			storage.Solar_stock += transaksi.Jumlah
 		case "obat":
 			var obat models.Ovk
 			err := tx.Where("nama = ?", transaksi.Tipe).First(&obat).Error; 
@@ -76,6 +74,8 @@ func CreateTransaksi(transaksi *models.Transaksi, kategori *string) error {
 				tx.Rollback()
 				return err
 			}
+		case "solar":
+			storage.Solar_stock += transaksi.Jumlah
 		case "sekam":
 			storage.Sekam_stock += transaksi.Jumlah
 		}
