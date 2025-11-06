@@ -21,6 +21,7 @@ type CreateTransaksiData struct{
 	Nama string
 	Jenis string
 	Kategori string
+	Tipe *string
 	Tanggal string
 	Nominal int
 	Jumlah int
@@ -66,6 +67,7 @@ func CreateTransaksi(w http.ResponseWriter, r *http.Request) {
 	nama := r.FormValue("nama")
 	jenis := r.FormValue("jenis")
 	kategori := r.FormValue("kategori")
+	tipe := r.FormValue("tipe")
 	tanggalStr := r.FormValue("tanggal")
 	nominalStr := r.FormValue("nominal")
 	jumlahStr := r.FormValue("jumlah")
@@ -100,6 +102,7 @@ func CreateTransaksi(w http.ResponseWriter, r *http.Request) {
 		nama,
 		jenis,
 		kategori,
+		&tipe,
 		parsedDate,
 		nominal,
 		jumlah,

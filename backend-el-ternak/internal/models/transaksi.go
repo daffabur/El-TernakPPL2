@@ -11,6 +11,7 @@ type Transaksi struct {
 	Nama string `gorm:"not null"`
 	Jenis string `gorm:"not null"`
 	Kategori string `gorm:"not null"`
+	Tipe *string `gorm:"default:null"`
 	Tanggal time.Time
 	Nominal int `gorm:"not null"`
 	Jumlah int `gorm:"not null"`
@@ -25,6 +26,7 @@ type TransaksiSummary struct{
 	Nama string
 	Jenis string
 	Kategori string
+	Tipe *string
 	Catatan string
 	Bukti_transaksi string
 	Total int

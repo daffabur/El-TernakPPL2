@@ -16,6 +16,9 @@ type Storage struct {
 	Solar_used  int
 	Sekam_used  int
 	Obat_used   int
+
+	Ovks []Ovk `gorm:"foreignKey:Storage_id"`
+	Pakans []Pakan `gorm:"foreignKey:Storage_id"`
 }
 
 type StorageResponse struct {
