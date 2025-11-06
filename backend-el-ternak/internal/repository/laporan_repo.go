@@ -9,6 +9,7 @@ import (
 
 func CreateLaporan(laporan *models.Laporan) error {
 	tx := config.DB.Begin()
+
 	if err := tx.Create(laporan).Error; err != nil {
 		tx.Rollback()
 		return err
@@ -20,16 +21,28 @@ func CreateLaporan(laporan *models.Laporan) error {
 		tx.Rollback()
 		return err
 	}
-
-	storage.Pakan_used += laporan.Pakan_used
 	storage.Sekam_used += laporan.Sekam_used
 	storage.Solar_used += laporan.Solar_used
-	storage.Obat_used += laporan.Obat_used
+	storage.Sekam_stock -= laporan.Sekam_used
+	storage.Solar_stock -= laporan.Solar_used
 
-	if err := tx.Save(storage).Error; err != nil {
+	//update tabel ovk
+	var ovk models.Ovk
+	if err := tx.Where("nama = ?", laporan.Obat_tipe).First(&ovk).Error; err != nil {
 		tx.Rollback()
-		return nil
+		return err
 	}
+	ovk.Used += laporan.Obat_used
+	ovk.Stock -= laporan.Obat_used
+
+	//update tabel pakan
+	var pakan models.Pakan
+	if err := tx.Where("nama = ?", laporan.Pakan_tipe).First(&pakan).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	pakan.Used += laporan.Pakan_used
+	pakan.Stock -= laporan.Pakan_used
 
 	//update tabel kandang
 	var kandang models.Kandang
@@ -45,6 +58,21 @@ func CreateLaporan(laporan *models.Laporan) error {
 	kandang.Solar += laporan.Solar_used
 	kandang.Sekam += laporan.Sekam_used
 	kandang.Obat += laporan.Obat_used
+
+	if err := tx.Save(storage).Error; err != nil {
+		tx.Rollback()
+		return nil
+	}
+
+	if err := tx.Save(ovk).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Save(pakan).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
 
 	if err := tx.Save(kandang).Error; err != nil {
 		tx.Rollback()
@@ -121,28 +149,37 @@ func UpdateLaporanByID(laporan_id uint, newData map[string]interface{}) error {
 
 	fmt.Print(diff.Kematian_ayam, diff.Pakan_used, diff.Obat_used, diff.Sekam_used, diff.Solar_used)
 
+	//ambil data ovk
+	var ovk models.Ovk
+	if err := tx.Where("nama = ?", new_laporan.Obat_tipe).First(&ovk).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	//update data ovk
+	ovk.Used += diff.Obat_used
+	ovk.Stock -= diff.Obat_used
+
+	//ambil data pakan
+	var pakan models.Pakan
+	if err := tx.Where("nama = ?", new_laporan.Pakan_tipe).First(&pakan).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	//update data pakan
+	pakan.Used += diff.Pakan_used
+	pakan.Stock -= diff.Pakan_used
+
 	//ambil data storage
 	var storage models.Storage
 	if err := tx.First(&storage, 1).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
-
 	//update data storage
-	storage.Pakan_used += diff.Pakan_used
-	storage.Obat_used += diff.Obat_used
 	storage.Solar_used += diff.Solar_used
 	storage.Sekam_used += diff.Sekam_used
-
-	storage.Pakan_stock -= diff.Pakan_used
-	storage.Obat_stock -= diff.Obat_used
 	storage.Solar_stock -= diff.Solar_used
 	storage.Sekam_stock -= diff.Sekam_used
-
-	if err := tx.Save(&storage).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
 
 	//ambil data kandang
 	var kandang models.Kandang
@@ -159,6 +196,21 @@ func UpdateLaporanByID(laporan_id uint, newData map[string]interface{}) error {
 	kandang.Sekam += diff.Sekam_used
 	kandang.Obat += diff.Obat_used
 
+	if err := tx.Save(&ovk).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	
+	if err := tx.Save(&pakan).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	
+	if err := tx.Save(&storage).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	
 	if err := tx.Save(&kandang).Error; err != nil {
 		tx.Rollback()
 		return err

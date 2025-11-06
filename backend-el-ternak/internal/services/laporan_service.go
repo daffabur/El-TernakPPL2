@@ -5,16 +5,18 @@ import (
 	"backend-el-ternak/internal/repository"
 )
 
-func CreateLaporan(createdBy, kandangId uint, rata_bobot_ayam float32, kematian, pakan, solar, sekam, obat int) error {
+func CreateLaporan(createdBy, kandangId uint, rata_bobot_ayam float32, kematian, pakan, solar, sekam, obat int, pakan_tipe, obat_tipe string) error {
 	newData := models.Laporan{
 		UserID: createdBy,
 		KandangID: kandangId,
 		Rata_bobot_ayam: rata_bobot_ayam,
 		Kematian_ayam: kematian,
 		Pakan_used: pakan,
+		Pakan_tipe: pakan_tipe,
 		Solar_used: solar,
 		Sekam_used: sekam,
 		Obat_used: obat,
+		Obat_tipe: obat_tipe,
 	}
 	err := repository.CreateLaporan(&newData)
 	if err != nil {

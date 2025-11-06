@@ -6,11 +6,12 @@ import (
 	"time"
 )
 
-func CreateTransaksi(nama, jenis, kategori string, tanggal time.Time, nominal int, jumlah int, catatan string, linkbukti string, total int) error {
+func CreateTransaksi(nama, jenis, kategori string, tipe *string, tanggal time.Time, nominal int, jumlah int, catatan string, linkbukti string, total int) error {
 	newTransaksi := models.Transaksi{
 		Nama: nama,
 		Jenis: jenis,
 		Kategori: kategori,
+		Tipe: tipe,
 		Tanggal: tanggal,
 		Nominal: nominal,
 		Jumlah: jumlah,

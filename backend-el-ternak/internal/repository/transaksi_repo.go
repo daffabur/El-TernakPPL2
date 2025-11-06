@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 func CreateTransaksi(transaksi *models.Transaksi, kategori *string) error {
@@ -27,11 +29,53 @@ func CreateTransaksi(transaksi *models.Transaksi, kategori *string) error {
 
 		switch transaksi.Kategori {
 		case "pakan":
-			storage.Pakan_stock += transaksi.Jumlah
+			var pakan models.Pakan
+			err := tx.Where("nama = ?", transaksi.Tipe).First(&pakan).Error; 
+
+			if errors.Is(err, gorm.ErrRecordNotFound){
+				pakan = models.Pakan{
+					Nama: *transaksi.Tipe,
+					Stock: transaksi.Jumlah,
+				}
+				if err := tx.Create(&pakan).Error; err != nil {
+					tx.Rollback()
+					return err
+				}
+			} else if err == nil {
+				pakan.Stock += transaksi.Jumlah
+				if err := tx.Where("nama = ?", transaksi.Tipe).Updates(&pakan).Error; err != nil {
+					tx.Rollback()
+					return err
+				}
+			} else {
+				tx.Rollback()
+				return err
+			}
+		case "obat":
+			var obat models.Ovk
+			err := tx.Where("nama = ?", transaksi.Tipe).First(&obat).Error; 
+
+			if errors.Is(err, gorm.ErrRecordNotFound){
+				obat = models.Ovk{
+					Nama: *transaksi.Tipe,
+					Stock: transaksi.Jumlah,
+				}
+				if err := tx.Create(&obat).Error; err != nil {
+					tx.Rollback()
+					return err
+				}
+			} else if err == nil {
+				obat.Stock += transaksi.Jumlah
+				if err := tx.Where("nama = ?", transaksi.Tipe).Updates(&obat).Error; err != nil {
+					tx.Rollback()
+					return err
+				}
+			} else {
+				tx.Rollback()
+				return err
+			}
 		case "solar":
 			storage.Solar_stock += transaksi.Jumlah
-		case "obat":
-			storage.Obat_stock += transaksi.Jumlah
 		case "sekam":
 			storage.Sekam_stock += transaksi.Jumlah
 		}
