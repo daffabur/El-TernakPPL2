@@ -1,5 +1,6 @@
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/models/storage_model.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/widgets/storage_detail.dart';
 import 'package:el_ternak_ppl2/services/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -27,6 +28,17 @@ class _StorageManagementState extends State<StorageManagement> {
     setState(() {
       _storageFuture = _storageService.getStorageData();
     });
+  }
+  void _navigateToDetail(String categoryName, IconData categoryIcon) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StorageDetailScreen(
+          categoryName: categoryName,
+          categoryIcon: categoryIcon,
+        ),
+      ),
+    );
   }
 
   @override
@@ -125,80 +137,90 @@ class _StorageManagementState extends State<StorageManagement> {
                               : 0.0;
 
                           // Tampilkan UI Card Anda dengan data dinamis
-                          return Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Container(
-                                margin: const EdgeInsets.only(top: 20, bottom: 20),
-                                padding: const EdgeInsets.only(top: 36, bottom: 48, left: 36, right: 36),
-                                decoration: BoxDecoration(
-                                  color: AppStyles.highlightColor,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item['name'],
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 30,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      // Gunakan unit yang sudah kita definisikan
-                                      "${item['used']} ${item['unit']} / ${item['total']} ${item['unit']}",
-                                      style: GoogleFonts.poppins(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: LinearProgressIndicator(
-                                        value: progress,
-                                        minHeight: 13,
-                                        backgroundColor: Colors.white,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                            AppStyles.IconCageCardColor),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Positioned(
-                                top: 0,
-                                left: 20,
-                                child: Container(
-                                  padding: const EdgeInsets.all(12),
+                          return InkWell(
+                            onTap: () => _navigateToDetail(
+                              item['name'], // Kirim nama kategori (misal "Pakan")
+                              item['icon'], // Kirim ikon kategori
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Container(
+                                  margin: const EdgeInsets.only(
+                                      top: 20, bottom: 20),
+                                  padding: const EdgeInsets.only(
+                                      top: 36, bottom: 48, left: 36, right: 36),
                                   decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                            color:
-                                            Colors.black.withOpacity(0.2),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 4))
-                                      ]),
-                                  child: Icon(
-                                    item['icon'],
-                                    color: const Color(0xFF2E7D32),
-                                    size: 32,
+                                    color: AppStyles.highlightColor,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item['name'],
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        "${item['used']} ${item['unit']} / ${item['total']} ${item['unit']}",
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: LinearProgressIndicator(
+                                          value: progress,
+                                          minHeight: 13,
+                                          backgroundColor: Colors.white,
+                                          valueColor:
+                                          AlwaysStoppedAnimation<Color>(
+                                              AppStyles.IconCageCardColor),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
-                            ],
+                                Positioned(
+                                  top: 0,
+                                  left: 20,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                              color: Colors.black
+                                                  .withOpacity(0.2),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 4))
+                                        ]),
+                                    child: Icon(
+                                      item['icon'],
+                                      color: const Color(0xFF2E7D32),
+                                      size: 32,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           );
                         },
                       ),
