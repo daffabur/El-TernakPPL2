@@ -1,11 +1,21 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/models/item_stock_model.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/models/user_model.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/models/transaction_model.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/models/summary_model.dart';
+import 'package:intl/intl.dart';
 
+class NoTransactionFoundException implements Exception {
+  final String message;
+  NoTransactionFoundException(this.message);
+
+  @override
+  String toString() => message;
+}
 class ApiService {
   static const String _baseUrl =
       'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api/';
@@ -18,7 +28,6 @@ class ApiService {
     if (token == null) {
       throw Exception('Token not found. Please log in again.');
     }
-    // BE kamu memakai token mentah (bukan "Bearer ...")
     return {
       'Content-Type': 'application/json; charset=UTF-8',
       'Authorization': token,
@@ -32,7 +41,6 @@ class ApiService {
   }
 
   List<Map<String, dynamic>> _extractDataList(dynamic body) {
-    // body bisa Map { data: [...] } atau langsung List
     if (body is Map<String, dynamic>) {
       final data = body['data'];
       if (data is List) {
@@ -64,14 +72,33 @@ class ApiService {
         throw Exception('Respons login tidak valid: token tidak ditemukan.');
       }
     } else {
-      try {
-        final Map<String, dynamic> responseBody = _safeDecode(response.body);
-        final errorMessage =
-            responseBody['message'] ?? 'Username atau password salah.';
-        throw Exception(errorMessage);
-      } catch (_) {
-        throw Exception('Gagal login. Status: ${response.statusCode}');
-      }
+        String serverMessage = 'Terjadi kesalahan. Coba lagi nanti';
+        try{
+          final Map<String, dynamic> responseBody = _safeDecode(response.body);
+          serverMessage = responseBody['message'] ?? 'Pesan error tidak ditemukan di server.';
+        }catch (_) {
+          print("Gagal membaca body JSON dari respons error. Status: ${response.statusCode}");
+        }
+        switch (response.statusCode) {
+          case 401:
+          case 400:
+            throw Exception(
+                serverMessage.contains('Pesan error tidak ditemukan')
+                    ? 'Username atau password salah.'
+                    : serverMessage);
+          case 403:
+            throw Exception('Anda tidak memiliki hak akses untuk masuk.');
+          case 404:
+            throw Exception(
+                'Endpoint login tidak ditemukan. Hubungi developer.');
+          case 500:
+            throw Exception(
+                'Server sedang mengalami masalah. Coba lagi beberapa saat.');
+
+          default:
+            throw Exception(
+                'Gagal login dengan status: ${response.statusCode}');
+        }
     }
   }
 
@@ -242,20 +269,45 @@ class ApiService {
     }
   }
 
-  Future<List<TransactionModel>> getFilteredTransactions(String periode) async {
-    if (periode.isEmpty) {
+  Future<List<TransactionModel>> getFilteredTransactions({
+    String? periode,
+    DateTime? tanggal,
+  }) async {
+    if ((periode == null || periode.isEmpty) && tanggal == null) {
+      return getAllTransactions();
+    }
+    final endpoint = '${_baseUrl}transaksi/filter';
+    final Map<String, String> queryParams = {};
+    if (periode != null && periode.isNotEmpty) {
+      queryParams['periode'] = periode;
+      print("Memanggil API filter dengan periode: $periode");
+    }else if (tanggal != null) {
+      // --- PERBAIKAN UTAMA DI SINI ---
+      // Backend mewajibkan parameter 'periode' jika 'tanggal' ada.
+      queryParams['periode'] = 'per_hari';
+
+      final DateFormat formatter = DateFormat('yyyy-MM-dd');
+      queryParams['tanggal'] = formatter.format(tanggal);
+
+      // Perbaiki juga pesan print agar akurat
+      print("Memanggil API filter dengan periode: ${queryParams['periode']} & tanggal: ${queryParams['tanggal']}");
+      // --- AKHIR PERBAIKAN ---
+
+    } else {
       return getAllTransactions();
     }
 
-    print("Memanggil API filter dengan periode: $periode");
+    // Bangun URI lengkap dengan query parameters.
+    final uri = Uri.parse(endpoint).replace(queryParameters: queryParams);
 
     try {
       final response = await http.get(
-        Uri.parse('${_baseUrl}transaksi/filter?periode=$periode'),
+        uri,
         headers: await _getAuthHeaders(),
       );
 
       print("Status Code Filter: ${response.statusCode}");
+      print("URL Filter yang dipanggil: $uri");
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = _safeDecode(response.body);
@@ -264,17 +316,24 @@ class ApiService {
             .whereType<Map<String, dynamic>>()
             .map((json) => TransactionModel.fromJson(json))
             .toList();
-      } else {
+      } else if (response.statusCode == 400) {
+        // Jika status 400, lempar exception khusus yang sudah kita buat.
+        throw NoTransactionFoundException(
+            'Tidak ada transaksi yang ditemukan untuk filter yang dipilih.');
+      }
+      else {
         throw Exception(
           'Gagal memuat transaksi terfilter. Status Code: ${response.statusCode}',
         );
       }
     } catch (e) {
+      if (e is NoTransactionFoundException) {
+        throw e;
+      }
       throw Exception('Gagal terhubung ke server saat filtering: $e');
     }
   }
 
-  // NB: mempertahankan nama fungsi original kamu
   Future<double> getTotalAmounByType(String type) async {
     if (type != 'pemasukan' && type != 'pengeluaran') {
       throw Exception('Jenis transaksi tidak valid: $type');
@@ -308,13 +367,18 @@ class ApiService {
   }
 
   Future<void> createTransaction(
-    Map<String, dynamic> transactionData,
-    String? imagePath,
-  ) async {
-    print("Mencoba membuat transaksi dengan data: $transactionData");
+      Map<String, dynamic> transactionData,
+      String? imagePath,
+      ) async {
+    // ---- BAGIAN DEBUGGING ----
+    print("=============================================");
+    print("🚀 [ApiService] Mencoba membuat transaksi...");
+    print("SENDING DATA: " + jsonEncode(transactionData));
     if (imagePath != null) {
-      print("Dengan path gambar: $imagePath");
+      print("WITH IMAGE AT: $imagePath");
     }
+    print("=============================================");
+    // ---- AKHIR BAGIAN DEBUGGING ----
 
     try {
       final url = Uri.parse('${_baseUrl}transaksi/create');
@@ -322,9 +386,10 @@ class ApiService {
 
       final token = await _authService.getToken();
       if (token == null) {
-        throw Exception('Token not found. Please log in again.');
+        throw Exception('Token tidak ditemukan. Silakan login kembali.');
       }
-      request.headers['Authorization'] = token;
+      // Pastikan format token konsisten
+      request.headers['Authorization'] = token.startsWith('Bearer ') ? token : 'Bearer $token';
 
       // fields
       transactionData.forEach((key, value) {
@@ -333,32 +398,57 @@ class ApiService {
 
       // file (opsional)
       if (imagePath != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('bukti_transaksi', imagePath),
-        );
+        final file = File(imagePath);
+        if (await file.exists()) {
+          request.files.add(
+            await http.MultipartFile.fromPath('bukti_transaksi', imagePath),
+          );
+        } else {
+          print("⚠️ WARNING: Path gambar ada, tetapi file tidak ditemukan di '$imagePath'. Mengirim tanpa gambar.");
+        }
       }
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      print("Status Code Create Transaction: ${response.statusCode}");
-      print("Response Body: ${response.body}");
+      // Selalu log respons dari server
+      print("📦 [ApiService] RESPONSE RECEIVED:");
+      print("STATUS CODE: ${response.statusCode}");
+      print("RESPONSE BODY: ${response.body}");
+      print("=============================================");
 
+      // ---- PERBAIKAN ERROR HANDLING ----
       if (response.statusCode != 201 && response.statusCode != 200) {
+
+        // --- PERBAIKAN UTAMA DI SINI ---
+        // Deklarasikan serverMessage di luar blok try-catch
+        String serverMessage = 'Gagal membuat transaksi.';
+        // --- AKHIR PERBAIKAN UTAMA ---
+
         try {
           final Map<String, dynamic> responseBody = _safeDecode(response.body);
-          final errorMessage =
-              responseBody['message'] ?? 'Gagal membuat transaksi.';
-          throw Exception(errorMessage);
+          // Isi nilainya di dalam try
+          serverMessage = responseBody['message'] ?? 'Tidak ada pesan error spesifik dari server.';
         } catch (_) {
-          throw Exception(
-            'Gagal membuat transaksi. Status: ${response.statusCode}',
-          );
+          // Jika parsing gagal, serverMessage akan tetap menggunakan nilai default-nya.
         }
+
+        // Buat pesan error yang lebih detail, menyertakan data yang dikirim
+        final String detailedError =
+            "Server Error: $serverMessage (Status: ${response.statusCode})\n"
+            "Data yang Dikirim: ${jsonEncode(transactionData)}";
+
+        // Lempar exception dengan pesan yang detail
+        throw Exception(detailedError);
       }
-      print('Transaksi berhasil dibuat: ${response.body}');
-    } catch (e) {
+      // ---- AKHIR PERBAIKAN ERROR HANDLING ----
+
+    } on Exception catch (e) {
+      // Tangkap exception yang sudah kita buat atau exception lain, lalu lempar kembali
       throw Exception(e.toString().replaceAll("Exception: ", ""));
+    } catch (e) {
+      // Tangkap error lain yang mungkin terjadi (misal: koneksi, dll)
+      throw Exception("Terjadi error tak terduga: $e");
     }
   }
 
@@ -442,6 +532,71 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Gagal terhubung ke server saat mengambil detail: $e');
+    }
+  }
+
+  Future<List<ItemStockModel>> getPakanByType(String itemType) async{
+    if (itemType.isEmpty) {
+      throw Exception('Jenis item tidak valid: $itemType');
+    }
+    final validItemType = itemType.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+    if (validItemType.isEmpty) {
+      throw Exception('Jenis item tidak valid.');
+    }
+
+    try{
+      final response = await http.get(
+        Uri.parse('${_baseUrl}/pakan'),
+        headers: await _getAuthHeaders(),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body)['data'];
+        return data
+            .map((json) => ItemStockModel.fromJson(json))
+            .where((item) => item.nama.trim().isNotEmpty)
+            .toList();
+      } else if (response.statusCode == 401) {
+          throw Exception('Sesi anda habis, silakan login kembali.');
+        }
+        else {
+          throw Exception(
+            'Gagal memuat data $validItemType. Status: ${response.statusCode}',
+          );
+        }
+      } catch (e) {
+      throw Exception('Gagal terhubung ke server saat mengambil $validItemType: $e');
+    }
+  }
+  Future<List<ItemStockModel>> getOvkByType(String itemType) async{
+    if (itemType.isEmpty) {
+      throw Exception('Jenis item tidak valid: $itemType');
+    }
+    final validItemType = itemType.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+    if (validItemType.isEmpty) {
+      throw Exception('Jenis item tidak valid.');
+    }
+
+    try{
+      final response = await http.get(
+        Uri.parse('${_baseUrl}/ovk'),
+        headers: await _getAuthHeaders(),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body)['data'];
+        return data
+            .map((json) => ItemStockModel.fromJson(json))
+            .where((item) => item.nama.trim().isNotEmpty)
+            .toList();
+      } else if (response.statusCode == 401) {
+        throw Exception('Sesi anda habis, silakan login kembali.');
+      }
+      else {
+        throw Exception(
+          'Gagal memuat data $validItemType. Status: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Gagal terhubung ke server saat mengambil $validItemType: $e');
     }
   }
 }

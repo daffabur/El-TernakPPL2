@@ -18,6 +18,8 @@ import 'package:el_ternak_ppl2/screens/Supervisor/Home_Screen/home_screen.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/money_management.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/cage_management.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/account_management.dart';
+import 'package:intl/intl.dart';
+
 
 class CustomDetailCage extends StatefulWidget {
   final Cage cage;
@@ -578,12 +580,17 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
                 ),
               )
                   : Column(
-                children: _reports
+                children: _reports.reversed.toList()
                     .take(4)
                     .map((report) {
+                  final combinedDateTimeString = '${report.tanggal} ${report.jam}';
+                  final dateTime = DateTime.parse(combinedDateTimeString);
+                  final formattedDate = DateFormat('dd MMMM yyyy', 'id_ID').format(dateTime);
+                  final formattedTime = DateFormat('HH:mm', 'id_ID').format(dateTime) + ' WIB';
+
                   return CustomReportcard(
-                    date: report.tanggal,
-                    time: report.jam,
+                    date: formattedDate,
+                    time: formattedTime,
                     details: "Bobot: ${report.bobot} kg | Mati: ${report.mati} | Pakan: ${report.pakan} kg",
                     onTap: () {
                       Navigator.push(

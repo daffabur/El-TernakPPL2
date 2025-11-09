@@ -1,5 +1,3 @@
-// lib/screens/Supervisor/Account_management/widgets/Custom_Bottom_Sheets.dart
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -61,6 +59,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
   int? _selectedKandangId; // nilai yang dikirim ke BE (kandangID)
 
   bool _isLoading = false;
+
 
   @override
   void initState() {
@@ -124,9 +123,6 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
     return v?.toString();
   }
 
-  // =========================================================
-  // Load cages & preselect
-  // =========================================================
   Future<void> _loadCagesAndPreselect() async {
     setState(() {
       _loadingCages = true;

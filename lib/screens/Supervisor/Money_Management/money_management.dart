@@ -1,11 +1,11 @@
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
+import 'package:el_ternak_ppl2/base/widgets/app_dialogs.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/models/transaction_model.dart';
 import 'package:el_ternak_ppl2/services/api_service.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/widgets/Custom_Bottom_Sheets.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/widgets/Summary_Card.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/widgets/Transaction_Item.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/models/summary_model.dart';
-import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/models/transaction_model.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -33,7 +33,9 @@ class _MoneyManagementState extends State<MoneyManagement> {
     "Hari ini": "hari_ini",
     "Minggu ini": "minggu_ini",
     "Bulan ini": "bulan_ini",
+    "Pilih Tanggal": "custom",
   };
+  DateTime? _selectedDate;
 
   @override
   void initState() {
@@ -41,27 +43,87 @@ class _MoneyManagementState extends State<MoneyManagement> {
     _loadTransactions();
   }
 
-  void _loadTransactions() {
+  void _loadTransactions() async{
     setState(() {
       _summaryFuture = _apiService.getSummary();
       final periode = _filterMap[_selectedFilter]!;
+      _transactionsFuture = _fetchFilteredTransactions();
 
-      if (periode.isEmpty) {
-        _transactionsFuture = _apiService.getAllTransactions();
+      if (periode == "custom" && _selectedDate != null) {
+        _transactionsFuture = _apiService.getFilteredTransactions(
+          tanggal: _selectedDate,
+        );
       } else {
-        _transactionsFuture = _apiService.getFilteredTransactions(periode);
+        _transactionsFuture = _apiService.getFilteredTransactions(
+          periode: periode,
+        );
       }
     });
   }
+  Future<List<TransactionModel>> _fetchFilteredTransactions() async {
+    try {
+      final periode = _filterMap[_selectedFilter]!;
 
-  void _onFilterSelected(String filter) {
-    setState(() {
-      _selectedFilter = filter;
-    });
+      if (periode == "custom" && _selectedDate != null) {
+        return await _apiService.getFilteredTransactions(
+          tanggal: _selectedDate,
+        );
+      } else {
+        return await _apiService.getFilteredTransactions(periode: periode);
+      }
+    } on NoTransactionFoundException catch (e) {
+      if (mounted) {
+        AppDialogs.showError(
+          context,
+          title: 'Informasi',
+          message: e.message,
+        );
+      }
+      return [];
+    } catch (e) {
+      if (mounted) {
+        AppDialogs.showError(
+          context,
+          title: 'Terjadi Kesalahan',
+          message: 'Gagal memuat data. Silakan coba lagi.',
+        );
+      }
+      throw e;
+    }
+  }
+  Future<void> _selectSingleDate() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      helpText: 'Pilih Tanggal',
+      cancelText: 'Batal',
+      confirmText: 'Pilih',
+    );
 
-    _loadTransactions();
+    if (pickedDate != null) {
+      setState(() {
+        _selectedDate = pickedDate;
+        _selectedFilter = "Pilih Tanggal";
+      });
+      _loadTransactions();
+    }
   }
 
+  void _onFilterSelected(String filter) {
+    if (filter == "Pilih Tanggal") {
+      _selectSingleDate();
+    } else {
+      setState(() {
+        _selectedFilter = filter;
+        _selectedDate = null;
+      });
+      _loadTransactions();
+    }
+  }
+
+  // --- PERBAIKAN 1: Pindahkan _showAddSheet ke scope kelas ---
   void _showAddSheet() {
     showModalBottomSheet<bool>(
       context: context,
@@ -70,7 +132,7 @@ class _MoneyManagementState extends State<MoneyManagement> {
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        child: const CustomBottomSheets(), 
+        child: const CustomBottomSheets(),
       ),
     ).then((isSuccess) {
       if (isSuccess == true) {
@@ -79,6 +141,7 @@ class _MoneyManagementState extends State<MoneyManagement> {
     });
   }
 
+  // --- PERBAIKAN 2: Pastikan build() ada di scope kelas ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -195,10 +258,17 @@ class _MoneyManagementState extends State<MoneyManagement> {
                       child: Row(
                         children: _filterMap.keys.map((label) {
                           final bool isSelected = _selectedFilter == label;
+                          String displayLabel = label;
+                          if (label == "Pilih Tanggal" &&
+                              _selectedDate != null) {
+                            displayLabel = DateFormat(
+                              'd MMM yyyy',
+                            ).format(_selectedDate!);
+                          }
                           return Padding(
                             padding: const EdgeInsets.only(right: 8),
                             child: FilterChip(
-                              label: Text(label),
+                              label: Text(displayLabel),
                               showCheckmark: false,
                               selected: isSelected,
                               selectedColor: AppStyles.highlightColor,
@@ -290,7 +360,10 @@ class _MoneyManagementState extends State<MoneyManagement> {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
                           return const Center(
-                            child: CircularProgressIndicator(),
+                            child: Padding(
+                              padding: EdgeInsets.all(20.0),
+                              child: CircularProgressIndicator(),
+                            ),
                           );
                         }
 
@@ -302,11 +375,17 @@ class _MoneyManagementState extends State<MoneyManagement> {
 
                         if (!snapshot.hasData || snapshot.data!.isEmpty) {
                           return const Center(
-                            child: Text("Belum ada transaksi."),
+                            child: Padding(
+                              padding: EdgeInsets.all(20.0),
+                              child: Text("Belum ada transaksi."),
+                            ),
                           );
                         }
 
+                        // Mengurutkan dari yang terbaru ke terlama berdasarkan ID
                         final transactions = snapshot.data!;
+                        transactions.sort((a, b) => b.id.compareTo(a.id));
+
                         return ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
@@ -314,7 +393,10 @@ class _MoneyManagementState extends State<MoneyManagement> {
                           itemCount: transactions.length,
                           itemBuilder: (context, index) {
                             final transaction = transactions[index];
-                            return TransactionItem(transaction: transaction, onDataChanged: _loadTransactions);
+                            return TransactionItem(
+                              transaction: transaction,
+                              onDataChanged: _loadTransactions,
+                            );
                           },
                         );
                       },

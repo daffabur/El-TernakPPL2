@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/report_model.dart';
 import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 class ReportService {
   final String _baseUrl = 'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api';
@@ -37,8 +38,7 @@ class ReportService {
       // Ambil list 'data' dari body JSON
       final List<dynamic> data = body['data'];
 
-      // Ubah setiap item di list JSON menjadi objek Report menggunakan Report.fromJson
-      // dan kembalikan sebagai List<Report>
+
       return data.map((item) => Report.fromJson(item as Map<String, dynamic>)).toList();
     } else {
       // Jika server tidak merespons dengan status 200 OK, lempar error
@@ -53,7 +53,7 @@ class ReportService {
       throw Exception('Autentikasi Gagal: Token tidak ditemukan');
     }
 
-    // Endpoint untuk detail: /laporan/{id}
+
     final uri = Uri.parse('$_baseUrl/laporan/$reportId');
 
     final response = await http.get(
@@ -67,7 +67,6 @@ class ReportService {
 
     if (response.statusCode == 200) {
       final body = jsonDecode(response.body);
-      // Data detail adalah satu objek, bukan list
       final Map<String, dynamic> data = body['data'];
       return Report.fromJson(data);
     } else {
@@ -77,9 +76,8 @@ class ReportService {
     }
   }
   Future<void> updateReport(int reportId, Map<String, dynamic> data) async {
-    // Siapkan payload sesuai format yang diminta backend
+
     final payload = {
-      // Gunakan null-aware operator untuk keamanan
       "rata_bobot_ayam": data['rata_bobot_ayam'],
       "kematian_ayam": data['kematian_ayam'],
       "pakan_used": data['pakan_used'],

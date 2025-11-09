@@ -87,6 +87,7 @@ class _AccountManagementState extends State<AccountManagement> {
               final user = users[index];
               return CustomCardEmployee(
                 user: user,
+                onDataChanged: _refreshUsers,
               );
             },
           );
