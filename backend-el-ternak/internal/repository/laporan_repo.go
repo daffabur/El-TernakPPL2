@@ -5,6 +5,7 @@ import (
 	"backend-el-ternak/internal/models"
 	"errors"
 	"fmt"
+	"time"
 )
 
 func CreateLaporan(laporan *models.Laporan) error {
@@ -113,6 +114,49 @@ func GetLaporanByID(laporan_id uint) (*models.LaporanDetail, error) {
 	}
 
 	return &laporan, nil
+}
+
+func GetLaporanFiltered(periode, tanggal string) ([]models.LaporanSummary, error) {
+	var laporans []models.LaporanSummary
+	var startDate, endDate time.Time
+	now := time.Now()
+
+	switch periode{
+	case "hari_ini":
+		startDate = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		endDate = startDate.Add(24 * time.Hour)
+	case "minggu_ini":
+		offset := int(now.Weekday())
+		if offset == 0 {
+			offset = 7
+		}
+		startDate = now.AddDate(0, 0, -offset+1)
+		endDate = startDate.AddDate(0 , 0, 7)
+	case "bulan_ini":
+		startDate = time.Date(now.Year(), now.Month(),1 , 0, 0, 0, 0, now.Location())
+		endDate = startDate.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	case "per_hari":
+		parsedDate, err := time.Parse("2006-01-02", tanggal)
+		if err != nil {
+			return nil, fmt.Errorf("format tanggal tidak valid, gunakan YYYY-MM-DD")
+		}
+
+		startDate = time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 0, 0, 0, 0, parsedDate.Location())
+		endDate = startDate.Add(24 * time.Hour)
+	}
+	
+	query := config.DB.Table("laporans").
+	Select("laporans.id", "users.username AS pencatat", "laporans.kandang_id", "TO_CHAR(laporans.created_at, 'YYYY-MM-DD') AS tanggal", "TO_CHAR(laporans.created_at, 'HH24:MI') AS jam", "laporans.rata_bobot_ayam", "laporans.kematian_ayam", "laporans.pakan_used").
+	Joins("LEFT JOIN users ON users.id = laporans.user_id").
+	Where("laporans.created_at BETWEEN ? AND ?", startDate, endDate).
+	Order("tanggal DESC")
+
+	err := query.Scan(&laporans).Error
+	if err != nil {
+		return nil , err
+	}
+
+	return laporans, nil
 }
 
 func UpdateLaporanByID(laporan_id uint, newData map[string]interface{}) error {
