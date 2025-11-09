@@ -190,11 +190,13 @@ func GetTransaksiSummary(w http.ResponseWriter, r *http.Request) {
 
 func GetTransaksiFiltered(w http.ResponseWriter, r *http.Request) {
 	periode := r.URL.Query().Get("periode")
+	tanggal := r.URL.Query().Get("tanggal")
 
 	validPeriode := map[string]bool{
 		"hari_ini" : true,
 		"minggu_ini" : true,
 		"bulan_ini" : true,
+		"per_hari" : true,
 	}
 
 	if !validPeriode[periode]{
@@ -202,7 +204,7 @@ func GetTransaksiFiltered(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	transaksis, err := services.GetTransaksiFiltered(periode)
+	transaksis, err := services.GetTransaksiFiltered(periode, tanggal)
 	if err != nil {
 		utils.RespondError(w, http.StatusInternalServerError, "gagal mengambil data transaksi")
 		return

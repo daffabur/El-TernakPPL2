@@ -52,8 +52,8 @@ func GetTransaksiSummary() (*models.TransaksiTotal, error) {
 	return summary, nil
 }
 
-func GetTransaksiFiltered(periode string) ([]models.TransaksiForAll, error) {
-	transaksis, err :=repository.GetTransaksiFiltered(periode)
+func GetTransaksiFiltered(periode, tanggal string) ([]models.TransaksiForAll, error) {
+	transaksis, err :=repository.GetTransaksiFiltered(periode, tanggal)
 	if err != nil {
 		return nil, err
 	}
