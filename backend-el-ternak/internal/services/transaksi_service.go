@@ -22,7 +22,7 @@ func CreateTransaksi(nama, jenis, kategori string, tipe *string, tanggal time.Ti
 
 	var kategoriPtr *string
 
-	if newTransaksi.Jenis == "pengeluaran" && (newTransaksi.Kategori == "pakan" || newTransaksi.Kategori == "obat" || newTransaksi.Kategori == "sekam" || newTransaksi.Kategori == "solar") {
+	if newTransaksi.Jenis == "pengeluaran" && (newTransaksi.Kategori == "pakan" || newTransaksi.Kategori == "ovk" || newTransaksi.Kategori == "sekam" || newTransaksi.Kategori == "solar") {
 		kategoriPtr = &newTransaksi.Kategori
 	}
 
