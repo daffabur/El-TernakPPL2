@@ -120,3 +120,28 @@ func HandleLaporanByID(w http.ResponseWriter, r *http.Request) {
 		utils.RespondError(w, http.StatusMethodNotAllowed, "method tidak diizinkan")
 	}
 }
+
+func GetLaporanFiltered(w http.ResponseWriter, r *http.Request) {
+	periode := r.URL.Query().Get("periode")
+	tanggal := r.URL.Query().Get("tanggal")
+
+	validPeriode := map[string]bool{
+		"hari_ini" : true,
+		"minggu_ini" : true,
+		"bulan_ini" : true,
+		"per_hari" : true,
+	}
+
+	if !validPeriode[periode]{
+		utils.RespondError(w, http.StatusBadRequest, "periode tidak valid")
+		return
+	}
+
+	laporans, err := services.GetLaporanFiltered(periode, tanggal)
+	if err != nil {
+		utils.RespondError(w, http.StatusInternalServerError, "gagal mengambil data laporan")
+		return
+	}
+
+	utils.RespondSuccess(w, http.StatusOK, "berhasil mengambil data laporan", laporans)
+}
