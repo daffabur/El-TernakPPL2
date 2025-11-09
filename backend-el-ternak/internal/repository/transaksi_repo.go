@@ -51,22 +51,22 @@ func CreateTransaksi(transaksi *models.Transaksi, kategori *string) error {
 				tx.Rollback()
 				return err
 			}
-		case "obat":
-			var obat models.Ovk
-			err := tx.Where("nama = ?", transaksi.Tipe).First(&obat).Error; 
+		case "ovk":
+			var ovk models.Ovk
+			err := tx.Where("nama = ?", transaksi.Tipe).First(&ovk).Error; 
 
 			if errors.Is(err, gorm.ErrRecordNotFound){
-				obat = models.Ovk{
+				ovk = models.Ovk{
 					Nama: *transaksi.Tipe,
 					Stock: transaksi.Jumlah,
 				}
-				if err := tx.Create(&obat).Error; err != nil {
+				if err := tx.Create(&ovk).Error; err != nil {
 					tx.Rollback()
 					return err
 				}
 			} else if err == nil {
-				obat.Stock += transaksi.Jumlah
-				if err := tx.Where("nama = ?", transaksi.Tipe).Updates(&obat).Error; err != nil {
+				ovk.Stock += transaksi.Jumlah
+				if err := tx.Where("nama = ?", transaksi.Tipe).Updates(&ovk).Error; err != nil {
 					tx.Rollback()
 					return err
 				}
