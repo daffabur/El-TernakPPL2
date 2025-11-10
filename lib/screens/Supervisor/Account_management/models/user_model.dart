@@ -42,7 +42,7 @@ class User {
     username: json["username"],
     role: json["role"],
     isActive: json["is_active"],
-    kandangId: json['kandangID'],
+    kandangId: json['kandang_id'],
   );
 
   get name => null;

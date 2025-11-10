@@ -129,6 +129,64 @@ class ApiService {
       throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
+  Future<List<User>> getPetinggi() async {
+    print("🚀 [ApiService] Mengambil data petinggi...");
+    try {
+      final headers = await _getAuthHeaders();
+      final response = await http.get(
+        Uri.parse('${_baseUrl}manage/petinggi'),
+        headers: headers,
+      );
+
+      print("📦 [ApiService] RESPONSE Petinggi: ${response.statusCode}");
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = _safeDecode(response.body);
+        final List<dynamic> dataList = jsonResponse['data'] ?? [];
+        return dataList
+            .whereType<Map<String, dynamic>>()
+            .map((json) => User.fromJson(json))
+            .toList();
+      } else if (response.statusCode == 401) {
+        throw Exception(
+            'Error 401: Unauthorized. Sesi Anda mungkin telah berakhir.');
+      } else {
+        throw Exception(
+            'Gagal memuat data petinggi. Status: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Gagal terhubung ke server saat mengambil data petinggi: $e');
+    }
+  }
+  Future<List<User>> getPegawai() async {
+    print("🚀 [ApiService] Mengambil data pegawai...");
+    try {
+      final headers = await _getAuthHeaders();
+      final response = await http.get(
+        Uri.parse('${_baseUrl}manage/pegawai'),
+        headers: headers,
+      );
+
+      print("📦 [ApiService] RESPONSE Pegawai: ${response.statusCode}");
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = _safeDecode(response.body);
+        final List<dynamic> dataList = jsonResponse['data'] ?? [];
+        return dataList
+            .whereType<Map<String, dynamic>>()
+            .map((json) => User.fromJson(json))
+            .toList();
+      } else if (response.statusCode == 401) {
+        throw Exception(
+            'Error 401: Unauthorized. Sesi Anda mungkin telah berakhir.');
+      } else {
+        throw Exception(
+            'Gagal memuat data pegawai. Status: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Gagal terhubung ke server saat mengambil data pegawai: $e');
+    }
+  }
 
   Future<List<User>> getPegawaiOnly() async {
     try {
@@ -371,13 +429,9 @@ class ApiService {
       String? imagePath,
       ) async {
     // ---- BAGIAN DEBUGGING ----
-    print("=============================================");
-    print("🚀 [ApiService] Mencoba membuat transaksi...");
-    print("SENDING DATA: " + jsonEncode(transactionData));
     if (imagePath != null) {
       print("WITH IMAGE AT: $imagePath");
     }
-    print("=============================================");
     // ---- AKHIR BAGIAN DEBUGGING ----
 
     try {
@@ -411,11 +465,7 @@ class ApiService {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      // Selalu log respons dari server
-      print("📦 [ApiService] RESPONSE RECEIVED:");
-      print("STATUS CODE: ${response.statusCode}");
-      print("RESPONSE BODY: ${response.body}");
-      print("=============================================");
+
 
       // ---- PERBAIKAN ERROR HANDLING ----
       if (response.statusCode != 201 && response.statusCode != 200) {
