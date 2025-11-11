@@ -216,6 +216,7 @@ class CageService {
       population: 0,
       deaths: 0,
       pic: null,
+      team: const [],
       status: 'active',
       notes: null,
       pakan: 0,

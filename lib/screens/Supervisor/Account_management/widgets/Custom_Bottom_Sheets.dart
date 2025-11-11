@@ -151,6 +151,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
               population: 0,
               deaths: 0,
               pic: null,
+              team: const [],
               status: '',
               notes: null,
               pakan: 0,

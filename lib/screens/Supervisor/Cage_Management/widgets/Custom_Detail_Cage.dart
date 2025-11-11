@@ -20,13 +20,13 @@ import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/cage_managemen
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/account_management.dart';
 import 'package:intl/intl.dart';
 
+// Import model User untuk menangani data tim
+import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/models/user_model.dart';
 
 class CustomDetailCage extends StatefulWidget {
   final Cage cage;
-  final String? overridePic;
 
-
-  const CustomDetailCage({super.key, required this.cage, this.overridePic});
+  const CustomDetailCage({super.key, required this.cage});
 
   @override
   State<CustomDetailCage> createState() => _CustomDetailCageState();
@@ -35,16 +35,11 @@ class CustomDetailCage extends StatefulWidget {
 class _CustomDetailCageState extends State<CustomDetailCage> {
   final _cageService = CageService();
   final _reportService = ReportService();
-  final _auth = AuthService();
 
   Cage? _cage;
-  String? _picFromApi;
   List<Report> _reports = [];
   bool _loading = true;
   bool _deleting = false;
-
-
-  static const String _base = 'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api/';
 
   @override
   void initState() {
@@ -54,91 +49,35 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
   }
 
   Future<void> _loadDetail() async {
-    // Tampilkan loading indicator saat refresh
     if (mounted) setState(() => _loading = true);
 
     try {
-      // Ambil detail kandang dan laporan secara bersamaan
+      // Ambil detail kandang (termasuk data 'team' yang baru) dan laporan
       final freshCageFuture = _cageService.getById(widget.cage.id);
-      final picRawFuture = _fetchPicRaw(widget.cage.id);
       final reportsFuture = _reportService.getByCageId(widget.cage.id);
 
-      // Tunggu semua proses selesai
-      final results = await Future.wait([freshCageFuture, picRawFuture, reportsFuture]);
+      final results = await Future.wait([freshCageFuture, reportsFuture]);
 
       final freshCage = results[0] as Cage;
-      final reports = results[2] as List<Report>;
+      final reports = results[1] as List<Report>;
 
       if (!mounted) return;
       setState(() {
         _cage = freshCage;
-        _reports = reports; // Simpan daftar laporan
+        _reports = reports;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
+      print("Error _loadDetail: $e");
       setState(() {
-        _cage = widget.cage; // Tampilkan data lama jika gagal
-        _reports = []; // Kosongkan laporan jika gagal
+        _cage = widget.cage;
+        _reports = [];
         _loading = false;
       });
     }
   }
 
-  Future<void> _fetchPicRaw(int id) async {
-    try {
-      final token = await _auth.getToken();
-      if (token == null) return;
-
-      final uri = Uri.parse('$_base/kandang/$id');
-      final res = await http.get(
-        uri,
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-      );
-
-      if (res.statusCode != 200) return;
-      final body = jsonDecode(res.body);
-      final data = (body is Map<String, dynamic>) ? body['data'] : null;
-
-      if (data is Map<String, dynamic>) {
-        // --- PERBAIKAN UTAMA DI SINI ---
-        final dynamic pjData =
-            data['Penanggung_jawab'] ?? data['penanggung_jawab'];
-
-        String? picName;
-
-        // Cek jika data PJ adalah List dan tidak kosong
-        if (pjData is List && pjData.isNotEmpty) {
-          // Ambil objek pertama dari List
-          final firstPj = pjData.first;
-          // Cek jika objek tersebut adalah Map dan ambil 'username'
-          if (firstPj is Map<String, dynamic>) {
-            picName = firstPj['username']?.toString() ?? firstPj['name']?.toString();
-          }
-        }
-        // Fallback jika ternyata data PJ bukan List, tapi Map
-        else if (pjData is Map<String, dynamic>) {
-          picName = pjData['username']?.toString() ?? pjData['name']?.toString();
-        }
-
-        final rawName = picName?.trim();
-        // --- AKHIR PERBAIKAN ---
-
-        if (rawName != null && rawName.isNotEmpty) {
-          if (!mounted) return;
-          // Set _picFromApi dengan nama yang sudah bersih
-          setState(() => _picFromApi = rawName);
-        }
-      }
-    } catch (_) {
-      /* ignore */
-    }
-  }
-
-  // Mapping status → label & warna
   (String label, Color bg, Color border, Color text) _statusStyle(String s) {
     final status = s.trim().toLowerCase();
     if (status == 'inactive' ||
@@ -148,16 +87,6 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
     }
     if (status == 'active' || status.contains('aktif')) {
       return ('Aktif', Colors.green.shade50, Colors.green, Colors.green);
-    }
-    if (status == 'maintenance' ||
-        status.contains('maint') ||
-        status.contains('perbaikan')) {
-      return (
-        'Maintenance',
-        Colors.orange.shade50,
-        Colors.orange,
-        Colors.orange,
-      );
     }
     return (s, Colors.grey.shade100, Colors.grey, Colors.grey);
   }
@@ -203,112 +132,30 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal menghapus kandang: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menghapus kandang: $e')));
     } finally {
       if (mounted) setState(() => _deleting = false);
     }
   }
 
-  // ==== Bottom bar lokal (tanpa mengubah file navbar) ====
-  void _onBottomTap(int index) {
-    switch (index) {
-      case 0:
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (route) => false,
-        );
-        break;
-      case 1:
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const MoneyManagement()),
-          (route) => false,
-        );
-        break;
-      case 2:
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const CageManagement()),
-          (route) => false,
-        );
-        break;
-      case 3:
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-                const Scaffold(body: Center(child: Text('Chicken'))),
-          ),
-          (route) => false,
-        );
-        break;
-      case 4:
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const AccountManagement()),
-          (route) => false,
-        );
-        break;
-    }
-  }
-
-  Widget _buildNavItem({
-    required String icon,
-    required String label,
-    required int index,
-    required bool selected,
-  }) {
-    final selectedColor = AppStyles.highlightColor;
-    final unselectedColor = AppStyles.highlightColor;
-    final selectedBackgroundColor = const Color(0xFF3E7B27);
-
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: label,
-      child: GestureDetector(
-        onTap: () => _onBottomTap(index),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          padding: const EdgeInsets.all(12.0),
-          decoration: selected
-              ? BoxDecoration(
-                  borderRadius: BorderRadius.circular(25),
-                  color: selectedBackgroundColor.withOpacity(0.1),
-                )
-              : const BoxDecoration(),
-          child: Iconify(
-            icon,
-            color: selected ? selectedColor : unselectedColor,
-            size: 28,
-          ),
-        ),
-      ),
-    );
-  }
-
-
   @override
   Widget build(BuildContext context) {
-    if (_loading  && _cage == null) {
+    if (_loading && _cage == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final cage = _cage!;
-    String picText;
 
-    if (_picFromApi?.trim().isNotEmpty == true) {
-      picText = _picFromApi!.trim();
-    } else if (widget.overridePic?.trim().isNotEmpty == true) {
-      picText = widget.overridePic!.trim();
-    } else if (cage.pic?.name.trim().isNotEmpty == true) {
-      picText = cage.pic!.name.trim();
-    } else {
-      picText = 'Belum Ditentukan';
-    }
+    // --- LOGIKA BARU UNTUK MENDAPATKAN PJ DAN TIM ---
+    // Gunakan helper 'pj' dari model Cage
+    final User? pj = cage.pj;
+    // Ambil seluruh tim
+    final List<User> team = cage.team;
+
+    // Tentukan teks yang akan ditampilkan (nama PJ atau fallback)
+    final String picText = pj?.username ?? 'Belum Ditentukan';
+    // --- AKHIR LOGIKA BARU ---
 
     final (label, bg, border, text) = _statusStyle(cage.status);
 
@@ -350,8 +197,6 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
         foregroundColor: Colors.black87,
         elevation: 0,
       ),
-
-      // Pull-to-refresh supaya status/PIC bisa diperbarui manual
       body: RefreshIndicator(
         onRefresh: _loadDetail,
         child: SingleChildScrollView(
@@ -360,34 +205,132 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header: PIC + status
+              // === HEADER: PIC (Dropdown) + Status ===
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x1A000000),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      picText,
-                      style: GoogleFonts.poppins(
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w600,
+                  // --- Dropdown Lihat Tim ---
+                  PopupMenuButton<User>(
+                    offset: const Offset(0, 40),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    color: Colors.white,
+                    elevation: 3,
+                    onSelected: (User user) {
+                      // Read-only, tidak ada aksi
+                    },
+                    // Tombol Utama (Tampilan Nama PJ)
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x1A000000),
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Avatar placeholder / icon
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.person,
+                                size: 16, color: Colors.blue.shade700),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            picText,
+                            style: GoogleFonts.poppins(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.keyboard_arrow_down_rounded,
+                              size: 20, color: Colors.black54),
+                        ],
                       ),
                     ),
+                    // Isi Menu Dropdown (Daftar Tim)
+                    itemBuilder: (BuildContext context) {
+                      if (team.isEmpty) {
+                        return [
+                          const PopupMenuItem(
+                              enabled: false, child: Text("Tidak ada tim"))
+                        ];
+                      }
+
+                      return team.map((User user) {
+                        return PopupMenuItem<User>(
+                          value: user,
+                          enabled: false, // Read-only
+                          height: 40,
+                          child: Row(
+                            children: [
+                              // Indikator PJ vs Anggota
+                              Icon(
+                                user.isPj
+                                    ? Icons.star_rounded
+                                    : Icons.circle,
+                                color: user.isPj
+                                    ? Colors.amber.shade600
+                                    : Colors.grey.shade300,
+                                size: user.isPj ? 20 : 12,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  user.username,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: user.isPj
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
+                                    color: user.isPj
+                                        ? Colors.black87
+                                        : Colors.black54,
+                                  ),
+                                ),
+                              ),
+                              if (user.isPj)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.shade50,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                        color: Colors.amber.shade200),
+                                  ),
+                                  child: Text(
+                                    "PJ",
+                                    style: GoogleFonts.poppins(
+                                        fontSize: 10,
+                                        color: Colors.amber.shade800,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                )
+                            ],
+                          ),
+                        );
+                      }).toList();
+                    },
                   ),
+
+                  // Badge Status
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
@@ -479,7 +422,7 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
 
               const SizedBox(height: 15),
 
-              // Sekam & Solar (placeholder)
+              // Kartu Sekam & Solar
               Row(
                 children: [
                   Expanded(
@@ -504,6 +447,7 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
 
               const SizedBox(height: 15),
 
+              // Kartu Pakan
               _wideStatCard(
                 title: "Konsumsi Pakan",
                 value: "${cage.pakan ?? 0} Kg",
@@ -513,6 +457,7 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
 
               const SizedBox(height: 15),
 
+              // Kartu Obat
               _wideStatCard(
                 title: "Obat",
                 value: "${cage.obat ?? 0} L",
@@ -522,40 +467,48 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
 
               const SizedBox(height: 24),
 
+              // Judul Laporan Terbaru
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text("Laporan Terbaru",
+                  Text(
+                    "Laporan Terbaru",
                     style: GoogleFonts.poppins(
-                      color: AppStyles.primaryColor,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600
-                    ),
+                        color: AppStyles.primaryColor,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600),
                   ),
                   OutlinedButton(
-                      onPressed: (){
+                      onPressed: () {
                         Navigator.push(
-                          context, MaterialPageRoute(builder: (context) => ReportHistoryScreen(cageId: cage.id,
-                          cageName: cage.name,)),
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ReportHistoryScreen(
+                                cageId: cage.id,
+                                cageName: cage.name,
+                              )),
                         );
                       },
                       style: OutlinedButton.styleFrom(
-                      shape: const StadiumBorder(),
-                      side: BorderSide(color: AppStyles.primaryColor, width: 1.5),
-                      foregroundColor: AppStyles.primaryColor,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    ),
+                        shape: const StadiumBorder(),
+                        side: BorderSide(
+                            color: AppStyles.primaryColor, width: 1.5),
+                        foregroundColor: AppStyles.primaryColor,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                      ),
                       child: Text(
                         'Lihat Lengkap',
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.w600,
                         ),
-                      )
-                  )
+                      ))
                 ],
               ),
               const SizedBox(height: 16),
+
+              // Daftar Laporan
               _loading
                   ? const Center(
                 child: Padding(
@@ -570,34 +523,48 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
                 alignment: Alignment.center,
                 child: Column(
                   children: [
-                    Icon(Icons.receipt_long_rounded, color: Colors.grey.shade300, size: 48),
+                    Icon(Icons.receipt_long_rounded,
+                        color: Colors.grey.shade300, size: 48),
                     const SizedBox(height: 8),
                     Text(
                       "Belum ada laporan terbaru",
-                      style: GoogleFonts.poppins(color: Colors.grey.shade600),
+                      style: GoogleFonts.poppins(
+                          color: Colors.grey.shade600),
                     ),
                   ],
                 ),
               )
                   : Column(
-                children: _reports.reversed.toList()
+                children: _reports.reversed
+                    .toList()
                     .take(4)
                     .map((report) {
-                  final combinedDateTimeString = '${report.tanggal} ${report.jam}';
-                  final dateTime = DateTime.parse(combinedDateTimeString);
-                  final formattedDate = DateFormat('dd MMMM yyyy', 'id_ID').format(dateTime);
-                  final formattedTime = DateFormat('HH:mm', 'id_ID').format(dateTime) + ' WIB';
+                  final combinedDateTimeString =
+                      '${report.tanggal} ${report.jam}';
+                  DateTime dateTime;
+                  try {
+                    dateTime = DateTime.parse(combinedDateTimeString);
+                  } catch (e) {
+                    dateTime = DateTime.now();
+                  }
+                  final formattedDate =
+                  DateFormat('dd MMMM yyyy', 'id_ID')
+                      .format(dateTime);
+                  final formattedTime =
+                      DateFormat('HH:mm', 'id_ID').format(dateTime) +
+                          ' WIB';
 
                   return CustomReportcard(
                     date: formattedDate,
                     time: formattedTime,
-                    details: "Bobot: ${report.bobot} kg | Mati: ${report.mati} | Pakan: ${report.pakan} kg",
+                    details:
+                    "Bobot: ${report.bobot} kg | Mati: ${report.mati} | Pakan: ${report.pakan} kg",
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => CustomDetailReport(
-                            reportId: report.id, // <-- Kirim ID laporan
+                            reportId: report.id,
                           ),
                         ),
                       );
@@ -605,6 +572,8 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
                   );
                 }).toList(),
               ),
+
+              // Tombol Hapus Kandang
               SafeArea(
                 top: false,
                 minimum: const EdgeInsets.only(bottom: 8),
@@ -630,18 +599,18 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
                       ),
                       child: _deleting
                           ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.2,
-                              ),
-                            )
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                        ),
+                      )
                           : Text(
-                              'Hapus Kandang',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                        'Hapus Kandang',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -652,7 +621,6 @@ class _CustomDetailCageState extends State<CustomDetailCage> {
           ),
         ),
       ),
-
     );
   }
 

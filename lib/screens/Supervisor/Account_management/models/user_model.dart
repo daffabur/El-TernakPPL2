@@ -27,6 +27,7 @@ class User {
   final String role;
   final bool isActive;
   final int? kandangId;
+  final bool isPj;
 
   User({
     required this.id,
@@ -34,6 +35,7 @@ class User {
     required this.role,
     required this.isActive,
     this.kandangId,
+    this.isPj = false,
   });
 
   // Factory constructor untuk membuat instance User dari JSON
@@ -43,6 +45,7 @@ class User {
     role: json["role"],
     isActive: json["is_active"],
     kandangId: json['kandang_id'],
+    isPj: json["is_pj"] ?? false,
   );
 
   get name => null;
