@@ -41,6 +41,38 @@ func CreateLaporan(w http.ResponseWriter, r *http.Request) {
 
 func GetLaporanHandler(w http.ResponseWriter, r *http.Request) {
 	kandang_idStr := r.URL.Query().Get("kandang")
+	periode := r.URL.Query().Get("periode")
+	tanggal := r.URL.Query().Get("tanggal")
+
+	if periode != "" {
+		idUint, err := strconv.ParseUint(kandang_idStr, 10, 64)
+		if err != nil {
+			utils.RespondError(w, http.StatusBadRequest, "invalid request")
+			return
+		}
+
+		id := uint(idUint)
+		validPeriode := map[string]bool{
+			"hari_ini" : true,
+			"minggu_ini" : true,
+			"bulan_ini" : true,
+			"per_hari" : true,
+		}
+
+		if !validPeriode[periode]{
+			utils.RespondError(w, http.StatusBadRequest, "periode tidak valid")
+			return
+		}
+
+		laporans, err := services.GetLaporanFiltered(id, periode, tanggal)
+		if err != nil {
+			utils.RespondError(w, http.StatusInternalServerError, "gagal mengambil data laporan")
+			return
+		}
+
+		utils.RespondSuccess(w, http.StatusOK, "berhasil mengambil data laporan", laporans)
+		return
+	}
 
 	if kandang_idStr != "" {
 		idUint, err := strconv.ParseUint(kandang_idStr, 10, 64)
@@ -121,27 +153,27 @@ func HandleLaporanByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetLaporanFiltered(w http.ResponseWriter, r *http.Request) {
-	periode := r.URL.Query().Get("periode")
-	tanggal := r.URL.Query().Get("tanggal")
+// func GetLaporanFiltered(w http.ResponseWriter, r *http.Request) {
+// 	periode := r.URL.Query().Get("periode")
+// 	tanggal := r.URL.Query().Get("tanggal")
 
-	validPeriode := map[string]bool{
-		"hari_ini" : true,
-		"minggu_ini" : true,
-		"bulan_ini" : true,
-		"per_hari" : true,
-	}
+// 	validPeriode := map[string]bool{
+// 		"hari_ini" : true,
+// 		"minggu_ini" : true,
+// 		"bulan_ini" : true,
+// 		"per_hari" : true,
+// 	}
 
-	if !validPeriode[periode]{
-		utils.RespondError(w, http.StatusBadRequest, "periode tidak valid")
-		return
-	}
+// 	if !validPeriode[periode]{
+// 		utils.RespondError(w, http.StatusBadRequest, "periode tidak valid")
+// 		return
+// 	}
 
-	laporans, err := services.GetLaporanFiltered(periode, tanggal)
-	if err != nil {
-		utils.RespondError(w, http.StatusInternalServerError, "gagal mengambil data laporan")
-		return
-	}
+// 	laporans, err := services.GetLaporanFiltered(periode, tanggal)
+// 	if err != nil {
+// 		utils.RespondError(w, http.StatusInternalServerError, "gagal mengambil data laporan")
+// 		return
+// 	}
 
-	utils.RespondSuccess(w, http.StatusOK, "berhasil mengambil data laporan", laporans)
-}
+// 	utils.RespondSuccess(w, http.StatusOK, "berhasil mengambil data laporan", laporans)
+// }
