@@ -1,28 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:el_ternak_ppl2/login.dart'; // balik ke login
-import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/widgets/Custom_Button.dart';
+import 'package:lat_mobile/screens/home/card/lumbung_card.dart';
+import '../card/keuangan_card.dart';
+import '../card/kandang_card.dart';
+import '../card/konsumsiChart_card.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  void _logout(BuildContext context) {
-    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-      (route) => false,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    // dibiarkan ringan (tanpa Scaffold) supaya desain dari BottomNavBar tetap dipakai
-    return Center(
-      child: CustomButton(
-        text: "Log Out",
-        backgroundColor: Colors.red, // persis seperti kodingan awalmu
-        textColor: Colors.white,
-        borderColor: Colors.red,
-        onTap: () => _logout(context), // bedanya: ini menjalankan logout
-      ),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const CardSaldoUsaha(),
+                const SizedBox(height: 20),
+                const InfoLumbungCard(),
+                const SizedBox(height: 20),
+                const InfoKandangCard(),
+                const SizedBox(height: 10),
+                const InfoKonsumsi(),
+              ],
+            ),
+          ),
+        ),
     );
   }
 }
