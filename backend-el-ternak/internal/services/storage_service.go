@@ -13,3 +13,12 @@ func GetCurrentStock() (*models.StorageResponse, error) {
 
 	return stocks, nil
 }
+
+func CheckPakanStock() (bool, error) {
+	status, err := repository.CheckPakanStock()
+	if err != nil {
+		return false, err
+	}
+
+	return status, nil
+}

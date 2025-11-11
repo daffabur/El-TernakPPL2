@@ -24,10 +24,6 @@ func LaporanRoutes(r *mux.Router) {
 		middleware.RoleMiddleware("petinggi", "pegawai")(http.HandlerFunc(handlers.CreateLaporan)),
 	)).Methods("POST")
 
-	// laporan.Handle("/filter", middleware.JwtMiddleware(
-	// 	middleware.RoleMiddleware("petinggi")(http.HandlerFunc(handlers.GetLaporanFiltered)),
-	// )).Methods("GET")
-
 	laporan.Handle("/{id}", middleware.JwtMiddleware(
 		middleware.RoleMiddleware("petinggi", "pegawai")(http.HandlerFunc(handlers.HandleLaporanByID)),
 	)).Methods("GET", "DELETE", "PATCH")
