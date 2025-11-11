@@ -116,7 +116,7 @@ func GetLaporanByID(laporan_id uint) (*models.LaporanDetail, error) {
 	return &laporan, nil
 }
 
-func GetLaporanFiltered(periode, tanggal string) ([]models.LaporanSummary, error) {
+func GetLaporanFiltered(kandang_id uint, periode, tanggal string) ([]models.LaporanSummary, error) {
 	var laporans []models.LaporanSummary
 	var startDate, endDate time.Time
 	now := time.Now()
@@ -148,6 +148,7 @@ func GetLaporanFiltered(periode, tanggal string) ([]models.LaporanSummary, error
 	query := config.DB.Table("laporans").
 	Select("laporans.id", "users.username AS pencatat", "laporans.kandang_id", "TO_CHAR(laporans.created_at, 'YYYY-MM-DD') AS tanggal", "TO_CHAR(laporans.created_at, 'HH24:MI') AS jam", "laporans.rata_bobot_ayam", "laporans.kematian_ayam", "laporans.pakan_used").
 	Joins("LEFT JOIN users ON users.id = laporans.user_id").
+	Where("laporans.kandang_id = ?", kandang_id).
 	Where("laporans.created_at BETWEEN ? AND ?", startDate, endDate).
 	Order("tanggal DESC")
 

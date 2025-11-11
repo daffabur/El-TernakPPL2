@@ -53,8 +53,8 @@ func GetLaporanByID(laporan_id uint) (*models.LaporanDetail, error) {
 	return laporan, nil
 }
 
-func GetLaporanFiltered(periode, tanggal string) ([]models.LaporanSummary, error) {
-	laporans, err :=repository.GetLaporanFiltered(periode, tanggal)
+func GetLaporanFiltered(kandang_id uint, periode, tanggal string) ([]models.LaporanSummary, error) {
+	laporans, err :=repository.GetLaporanFiltered(kandang_id, periode, tanggal)
 	if err != nil {
 		return nil, err
 	}
