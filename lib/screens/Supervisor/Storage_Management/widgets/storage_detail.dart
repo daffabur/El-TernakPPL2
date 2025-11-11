@@ -1,9 +1,14 @@
+// lib/screens/Supervisor/Storage_Management/widgets/storage_detail.dart
+
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/models/storage_detail.dart';
-import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/widgets/addStockBottomSheets.dart';// import 'package:el_ternak_ppl2/services/storage_service.dart'; // <-- Dihapus
+// --- IMPORT SERVICE BARU ---
+import 'package:el_ternak_ppl2/services/storage_service.dart';
+// ---
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+// --- 1. UBAH JADI STATEFULWIDGET ---
 class StorageDetailScreen extends StatefulWidget {
   final String categoryName;
   final IconData categoryIcon;
@@ -19,101 +24,62 @@ class StorageDetailScreen extends StatefulWidget {
 }
 
 class _StorageDetailScreenState extends State<StorageDetailScreen> {
-  void _showAddStockSheet(
-      BuildContext context, StorageItem item, List<StorageItem> allItems) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding:
-          EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: AddStockBottomSheet(
-            selectedItem: item,
-            allItemsInCategory: allItems,
-          ),
-        );
-      },
-    ).then((isSuccess) {
-      if (isSuccess == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Simulasi refresh data...")),
-        );
+  // --- 2. TAMBAHKAN STATE UNTUK SERVICE DAN FUTURE ---
+  final StorageService _storageService = StorageService();
+  late Future<List<StorageItem>> _itemsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // --- 3. PANGGIL API BERDASARKAN KATEGORI ---
+    _loadDetails();
+  }
+
+  void _loadDetails() {
+    setState(() {
+      // Tentukan API mana yang harus dipanggil
+      if (widget.categoryName == "Pakan") {
+        _itemsFuture = _storageService.getPakanDetails();
+      } else if (widget.categoryName == "Obat") {
+        _itemsFuture = _storageService.getOvkDetails();
+      } else {
+        // Untuk Solar & Sekam, kita buat data "dummy dinamis"
+        // karena mereka tidak punya daftar sub-item
+        _itemsFuture = _createFakeList();
       }
     });
   }
 
+  // Fungsi untuk menangani Solar & Sekam (yang tidak punya detail)
+  Future<List<StorageItem>> _createFakeList() async {
+    // Kita tidak bisa mengambil dari API /storage/ karena butuh data 'used' dan 'total'
+    // Untuk saat ini, kita tampilkan saja item tunggal seperti di data dummy Anda
+    String unit = "L";
+    if (widget.categoryName == "Sekam") unit = "Kg";
+
+    return [
+      StorageItem(
+        id: widget.categoryName.toLowerCase(),
+        name: widget.categoryName,
+        // TODO: Data ini seharusnya diambil dari API /storage/
+        currentStock: 100,
+        totalStock: 200,
+        unit: unit,
+        category: widget.categoryName,
+      ),
+    ];
+  }
+
+
+  void _showAddStockSheet(
+      BuildContext context, StorageItem item, List<StorageItem> allItems) {
+    // TODO: Panggil bottom sheet "Tambah Stok" di sini
+    print("Membuka bottom sheet untuk ${item.name}");
+  }
+
   @override
   Widget build(BuildContext context) {
-    final List<StorageItem> items;
-    if (widget.categoryName == "Pakan") {
-      items = [
-        StorageItem(
-            id: "p1",
-            name: "201C TT G",
-            currentStock: 160,
-            totalStock: 300,
-            unit: "Kg",
-            category: "Pakan"),
-        StorageItem(
-            id: "p2",
-            name: "TBR 01",
-            currentStock: 200,
-            totalStock: 300,
-            unit: "Kg",
-            category: "Pakan"),
-        StorageItem(
-            id: "p3",
-            name: "BR12WD",
-            currentStock: 200,
-            totalStock: 300,
-            unit: "Kg",
-            category: "Pakan"),
-      ];
-    } else if (widget.categoryName == "Obat") {
-      items = [
-        StorageItem(
-            id: "o1",
-            name: "201C TT G", // Contoh dari screenshot
-            currentStock: 160,
-            totalStock: 290,
-            unit: "Kg",
-            category: "Obat"),
-        StorageItem(
-            id: "o2",
-            name: "OVK Lain",
-            currentStock: 100,
-            totalStock: 200,
-            unit: "L",
-            category: "Obat"),
-      ];
-    } else if (widget.categoryName == "Solar") {
-      items = [
-        StorageItem(
-            id: "s1",
-            name: "Solar",
-            currentStock: 100,
-            totalStock: 200,
-            unit: "L",
-            category: "Solar"),
-      ];
-    } else if (widget.categoryName == "Sekam") {
-      items = [
-        StorageItem(
-            id: "sk1",
-            name: "Sekam",
-            currentStock: 100,
-            totalStock: 200,
-            unit: "Kg",
-            category: "Sekam"),
-      ];
-    } else {
-      items = []; // Kategori tidak dikenal
-    }
-    // --- AKHIR DATA CONTOH ---
+    // --- 4. HAPUS SEMUA BLOK IF/ELSE DUMMY ---
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -134,20 +100,58 @@ class _StorageDetailScreenState extends State<StorageDetailScreen> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
       ),
-      // FutureBuilder dan RefreshIndicator dihapus, diganti ListView.builder langsung
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          // Ini adalah kartu item individual di dalam daftar
-          return _buildStorageItemCard(context, item, items);
+      // --- 5. GUNAKAN FUTUREBUILDER ---
+      body: FutureBuilder<List<StorageItem>>(
+        future: _itemsFuture,
+        builder: (context, snapshot) {
+          // 5a. Saat Loading
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          // 5b. Saat Error
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text("Gagal memuat: ${snapshot.error}", textAlign: TextAlign.center),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: _loadDetails,
+                      child: const Text("Coba Lagi"),
+                    )
+                  ],
+                ),
+              ),
+            );
+          }
+
+          // 5c. Saat Sukses (Data Kosong)
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text("Tidak ada item ditemukan."));
+          }
+
+          // 5d. Saat Sukses (Ada Data)
+          final items = snapshot.data!;
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              // Panggil widget kartu yang sudah Anda buat
+              return _buildStorageItemCard(context, item, items);
+            },
+          );
         },
       ),
     );
   }
 
-  // Widget _buildStorageItemCard (Tidak berubah, sudah benar)
+  // Widget _buildStorageItemCard (Tidak berubah)
   Widget _buildStorageItemCard(
       BuildContext context, StorageItem item, List<StorageItem> allItems) {
     return Container(
@@ -199,6 +203,8 @@ class _StorageDetailScreenState extends State<StorageDetailScreen> {
                 ),
                 const SizedBox(width: 16),
                 Text(
+                  // --- PERBAIKAN KECIL ---
+                  // Gunakan data dinamis dari model
                   "${item.currentStock.toStringAsFixed(0)} / ${item.totalStock.toStringAsFixed(0)} ${item.unit}",
                   style: GoogleFonts.poppins(
                     fontSize: 12,
