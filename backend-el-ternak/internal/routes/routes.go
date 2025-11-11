@@ -2,7 +2,6 @@ package routes
 
 import (
 	"backend-el-ternak/internal/handlers"
-	"backend-el-ternak/internal/middleware"
 
 	"github.com/gorilla/mux"
 )
@@ -21,6 +20,4 @@ func RegisteredRoutes(r *mux.Router)  {
 	StorageRoutes(api)
 	OvkRoutes(api)
 	PakanRoutes(api)
-	
-	api.Use(middleware.EnableCORS)
 }

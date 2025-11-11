@@ -28,8 +28,8 @@ func main()  {
 		http.Redirect(w, r, "/api/", http.StatusTemporaryRedirect)
 	})
 	
-	routes.RegisteredRoutes(r)
 	r.Use(middleware.EnableCORS)
+	routes.RegisteredRoutes(r)
 
 	log.Println("Server running on port: 11222")
 	log.Fatal(http.ListenAndServe(":11222", r))
