@@ -8,11 +8,6 @@ import 'package:el_ternak_ppl2/services/auth_service.dart';
 // Tab pages
 import 'package:el_ternak_ppl2/screens/Employee/Home_Screen/home_screen.dart';
 import 'package:el_ternak_ppl2/screens/Employee/Cage_management/cage_management_peg.dart';
-
-/// Bottom navbar versi Pegawai dengan nested navigators.
-/// - Navbar ini menjadi ROOT (Scaffold tunggal).
-/// - Tiap tab punya Navigator sendiri, sehingga push ke detail
-///   TETAP menampilkan navbar ini (tidak perlu taruh navbar di halaman lain).
 class BottomNavBarPeg extends StatefulWidget {
   const BottomNavBarPeg({super.key});
 
@@ -50,7 +45,6 @@ class _BottomNavBarPegState extends State<BottomNavBarPeg> {
 
   void _onItemTapped(int index) {
     if (_selectedIndex == index) {
-      // Jika tab sama & bisa pop, pop ke root tab
       final nav = _navKeys[index].currentState!;
       while (nav.canPop()) {
         nav.pop();

@@ -64,7 +64,6 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
   String? _selectedItemName;
   bool _isItemLoading = false;
   bool _showManualItemInput = false;
-
   Future<void> _fetchPakanType(String itemType) async {
     setState((){
       _isItemLoading = true;
@@ -81,7 +80,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
       if(mounted){
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-             backgroundColor: Colors.red,
+              backgroundColor: Colors.red,
               content: Text('Gagal memuat daftar $itemType: ${e.toString().replaceAll("Exception: ", "")}'),
             )
         );
@@ -123,6 +122,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
       }
     }
   }
+
 
   @override
   void initState() {

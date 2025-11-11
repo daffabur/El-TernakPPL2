@@ -237,6 +237,8 @@ class CageService {
     required num solarUsed,
     required num sekamUsed,
     required num obatUsed,
+    String? pakanTipe,
+    String? obatTipe,
   }) async {
     // Ambil id user (created_by) dari /account/me
     final me = await http
@@ -272,6 +274,8 @@ class CageService {
       "solar": solarUsed,
       "sekam": sekamUsed,
       "obat": obatUsed,
+      "pakan_tipe": pakanTipe,
+      "obat_tipe": obatTipe,
     };
 
     final r = await http

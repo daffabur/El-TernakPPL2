@@ -1,3 +1,4 @@
+import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/screens/Employee/Cage_Management/widgets/custom_input_harian_card.dart';
 import 'package:el_ternak_ppl2/screens/Employee/Cage_management/widgets/_app_bar.dart';
 import 'package:el_ternak_ppl2/screens/Employee/Cage_management/widgets/_history_section.dart';
@@ -24,10 +25,8 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
   bool _loading = true;
   String? _error;
 
-  // -> kontrol visibilitas kartu input dari parent
-  bool _hideInput = false;
+  bool _isInputMode = false;
 
-  // ===== Riwayat dari API =====
   List<Laporan> _riwayat = <Laporan>[];
   bool _loadingRiwayat = false;
 
@@ -56,7 +55,6 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
         _loading = false;
       });
 
-      // Setelah detail berhasil, ambil riwayat
       await _loadRiwayat(fresh.id ?? id);
     } catch (e) {
       if (!mounted) return;
@@ -72,7 +70,6 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
     }
   }
 
-  // Gabungkan tanggal (YYYY-MM-DD) + jam (HH:mm) jadi DateTime untuk sorting
   DateTime _combineToDateTime(Laporan lap) {
     try {
       final date = DateTime.parse(lap.tanggalIso ?? '');
@@ -91,7 +88,6 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
     });
     try {
       final items = await _service.getLaporanPerKandang(kandangId);
-      // Sort DESC (terbaru di atas)
       items.sort(
             (a, b) => _combineToDateTime(b).compareTo(_combineToDateTime(a)),
       );
@@ -115,24 +111,16 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  num _numFrom(Map<String, num> m, List<String> keys, {num def = 0}) {
-    for (final k in keys) {
-      if (m.containsKey(k)) return m[k] ?? def;
-    }
-    return def;
-  }
-
-  Future<void> _submitHarian(Map<String, num> data) async {
-    final kematian = _numFrom(data, ['kematian_ayam', 'kematian']);
-    final rataBobot = _numFrom(data, [
-      'rata_bobot_ayam',
-      'ratarata',
-      'ratarat',
-    ]);
-    final pakan = _numFrom(data, ['pakan_used', 'pakan']);
-    final solar = _numFrom(data, ['solar_used', 'solar']);
-    final sekam = _numFrom(data, ['sekam_used', 'sekam']);
-    final obat = _numFrom(data, ['obat_used', 'obat']);
+  Future<void> _submitHarian(Map<String, dynamic> data) async {
+    // Ekstrak data dari payload Map<String, dynamic>
+    final kematian = (data['kematian_ayam'] as num?) ?? 0;
+    final rataBobot = (data['rata_bobot_ayam'] as num?) ?? 0;
+    final pakan = (data['pakan_used'] as num?) ?? 0;
+    final pakanTipe = (data['pakan_tipe'] as String?); // <-- Data baru (String)
+    final solar = (data['solar_used'] as num?) ?? 0;
+    final sekam = (data['sekam_used'] as num?) ?? 0;
+    final obat = (data['obat_used'] as num?) ?? 0;
+    final obatTipe = (data['obat_tipe'] as String?); // <-- Data baru (String)
 
     final id = widget.cage.id ?? _detail?.id ?? -1;
     if (id <= 0) {
@@ -141,6 +129,10 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
     }
 
     try {
+      print("Data Laporan yang akan dikirim (DEBUG):");
+      print("Pakan: $pakanTipe - $pakan kg");
+      print("Obat: $obatTipe - $obat L");
+
       await _service.createLaporan(
         kandangId: id,
         kematianAyam: kematian.toInt(),
@@ -149,16 +141,14 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
         solarUsed: solar,
         sekamUsed: sekam,
         obatUsed: obat,
+        pakanTipe: pakanTipe,
+        obatTipe: obatTipe,
       );
 
       if (!mounted) return;
       _showSnack('Laporan harian BERHASIL dikirim ke server.');
 
-      // === AUTO RELOAD TANPA DELAY ===
-      setState(() {
-        _hideInput = true;
-      });
-
+      // Auto-reload data
       await Future.wait([
         _loadRiwayat(id),
             () async {
@@ -172,10 +162,62 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
     } catch (e) {
       if (!mounted) return;
       _showSnack('Gagal mengirim laporan: $e');
+      throw Exception('Gagal kirim: $e');
     }
   }
 
+  // (Widget _buildInputTrigger tidak berubah)
+  Widget _buildInputTrigger() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Input Data Kandang',
+            style: GoogleFonts.poppins(
+              color: AppStyles.primaryColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() => _isInputMode = true);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppStyles.highlightColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+            ),
+            child: Text(
+              'Buat Laporan',
+              style: GoogleFonts.poppins(fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  // (Widget build() tidak berubah)
   @override
   Widget build(BuildContext context) {
     final cageTitle = (_detail ?? widget.cage).name;
@@ -188,7 +230,7 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: DetailAppBar (title: cageTitle),
+      appBar: DetailAppBar(title: cageTitle),
       body: Stack(
         children: [
           RefreshIndicator(
@@ -198,17 +240,22 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  if (!_hideInput)
+                  if (_isInputMode)
                     CustomInputHarianCard(
                       key: _inputCardKey,
-                      onSubmit: _submitHarian,
-                      submitterName: cage.pic?.name ?? cage.pic?.username ?? '-', // <= ini
-                    ),
-                  if (!_hideInput) const SizedBox(height: 16),
+                      onSubmit: _submitHarian, // <-- Tipe payload sudah diubah
+                      submitterName:
+                      cage.pic?.name ?? cage.pic?.username ?? '-',
+                      onHidden: () {
+                        setState(() => _isInputMode = false);
+                      },
+                    )
+                  else
+                    _buildInputTrigger(),
 
+                  const SizedBox(height: 16),
                   PopulationStatCard(cage: cage),
                   const SizedBox(height: 12),
-
                   Row(
                     children: [
                       Expanded(
@@ -230,42 +277,35 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 12),
-
                   WideStatCard(
                     title: "Konsumsi Pakan",
                     value: "${cage.pakan ?? 0} kg",
                     asset: "assets/images/ic_pakan.svg",
                     assetScale: 0.25,
                   ),
-
                   const SizedBox(height: 12),
-
                   WideStatCard(
                     title: "Obat",
                     value: "${cage.obat ?? 0} L",
                     asset: "assets/images/ic_obat.svg",
                     assetScale: 0.22,
                   ),
-
                   const SizedBox(height: 16),
-
                   HistorySection(
-                      isLoading: _loadingRiwayat,
-                      historyItems: _riwayat,
-                      onRefresh: () {
-                        final id = _detail?.id ?? widget.cage.id;
-                        if (id != null && id > 0) {
-                          _loadRiwayat(id);
-                        }
-                      },
+                    isLoading: _loadingRiwayat,
+                    historyItems: _riwayat,
+                    onRefresh: () {
+                      final id = _detail?.id ?? widget.cage.id;
+                      if (id != null && id > 0) {
+                        _loadRiwayat(id);
+                      }
+                    },
                   )
                 ],
               ),
             ),
           ),
-
           if (_loading)
             const Positioned(
               top: 0,
@@ -278,6 +318,7 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
     );
   }
 
+  // (Widget _errorView tidak berubah)
   Widget _errorView(String message) {
     return Scaffold(
       backgroundColor: Colors.white,
