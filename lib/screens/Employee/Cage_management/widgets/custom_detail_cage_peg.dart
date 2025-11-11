@@ -518,7 +518,7 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
                     CustomInputHarianCard(
                       key: _inputCardKey,
                       onSubmit: _submitHarian,
-                      submitterName: cage.pic,
+                      submitterName: cage.pic?.name,
                     ),
                   if (!_hideInput) const SizedBox(height: 16),
 

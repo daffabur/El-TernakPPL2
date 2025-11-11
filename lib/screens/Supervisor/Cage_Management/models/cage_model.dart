@@ -10,10 +10,10 @@ class Cage {
   final User? pic;
   final String status;
   final String? notes;
-  final int pakan;
-  final int solar;
-  final int sekam;
-  final int obat;
+  // final int pakan;
+  // final int solar;
+  // final int sekam;
+  // final int obat;
 
   // ===== tambahan: ringkasan konsumsi dari BE =====
   final num? pakan; // kg

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:lat_mobile/screens/home/card/lumbung_card.dart';
-import '../card/keuangan_card.dart';
-import '../card/kandang_card.dart';
-import '../card/konsumsiChart_card.dart';
+import 'package:el_ternak_ppl2/login.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/widgets/Custom_Button.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Home_Screen/home/card/keuangan_card.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Home_Screen/home/card/kandang_card.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Home_Screen/home/card/konsumsiChart_card.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Home_Screen/home/card/lumbung_card.dart';
+
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
