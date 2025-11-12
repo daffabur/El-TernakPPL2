@@ -46,7 +46,7 @@ class TransactionModel {
       kategori: json['Kategori'] ?? 'Lainnya',
       total: double.tryParse(json['Total'].toString()) ?? 0.0,
       catatan: json['Catatan'],
-      bukti: json['Bukti'],
+      bukti: json['Bukti_transaksi'],
     );
   }
 }

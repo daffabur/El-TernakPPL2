@@ -17,11 +17,22 @@ class ReportService {
       'Authorization': 'Bearer $token', // Sesuaikan jika format token berbeda
     };
   }
-  Future<List<Report>> getByCageId(int cageId) async {
+  Future<List<Report>> getByCageId(int cageId, {DateTime? date}) async {
     final token = await _auth.getToken();
     if (token == null) throw Exception('Token not found');
 
-    final uri = Uri.parse('$_baseUrl/laporan?kandang=$cageId');
+    final queryParams = <String, String>{
+      'kandang': cageId.toString(),
+    };
+
+    if (date != null) {
+      queryParams['periode'] = 'per_hari';
+      queryParams['tanggal'] = DateFormat('yyyy-MM-dd').format(date);
+    }
+
+    final uri = Uri.parse('$_baseUrl/laporan').replace(queryParameters: queryParams);
+    print("Memanggil API Laporan: $uri");
+
     final response = await http.get(
       uri,
       headers: {
@@ -32,18 +43,30 @@ class ReportService {
     );
 
     if (response.statusCode == 200) {
-      // Decode body JSON
       final body = jsonDecode(response.body);
 
-      // Ambil list 'data' dari body JSON
-      final List<dynamic> data = body['data'];
+      // --- PERBAIKAN PENTING DI SINI ---
+      // Ambil 'data' sebagai dynamic terlebih dahulu
+      final dynamic data = body['data'];
 
+      // Cek apakah 'data' adalah List SEBELUM digunakan
+      if (data is List) {
+        // Jika ini adalah List (meskipun kosong), proses seperti biasa
+        return data.map((item) => Report.fromJson(item as Map<String, dynamic>)).toList();
+      } else {
+        // Jika 'data' adalah null atau BUKAN List,
+        // kembalikan list kosong. JANGAN CRASH.
+        return [];
+      }
+      // --- AKHIR PERBAIKAN ---
 
-      return data.map((item) => Report.fromJson(item as Map<String, dynamic>)).toList();
     } else {
-      // Jika server tidak merespons dengan status 200 OK, lempar error
+      // (Error handling untuk status non-200)
       final body = jsonDecode(response.body);
       final message = body['message'] ?? 'Gagal mengambil data laporan';
+      if (response.statusCode == 404) {
+        return [];
+      }
       throw Exception('$message (Status: ${response.statusCode})');
     }
   }

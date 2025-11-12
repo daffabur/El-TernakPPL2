@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/models/item_stock_model.dart';
@@ -155,6 +156,10 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
         maxWidth: 1024,
       );
       if (pickedFile != null) {
+        // --- TAMBAHAN DEBUGGING ---
+        print("✅ [DEBUG-UI] Gambar dipilih: ${pickedFile.path}");
+        print("✅ [DEBUG-UI] Ukuran File: ${await pickedFile.length()} bytes");
+        // --- AKHIR DEBUGGING ---
         setState(() {
           _imageFile = pickedFile;
         });
@@ -226,15 +231,14 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
 
 
 
-  void _handleSave() async {
-    // 1. Validasi semua field dalam form
+  Future<void> _handleSave() async {
     if (!(_formKey.currentState?.validate() ?? false)) {return;
     }
     setState(() {
       _isLoading = true;
     });
     final String transactionTitle = _namaController.text.trim();
-    String specificItemType = ''; // Default string kosong
+    String specificItemType = '';
     if (_selectedKategori == 'pakan' || _selectedKategori == 'ovk') {
 
       if (_showManualItemInput) {
@@ -276,9 +280,15 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
       transactionData.remove('tipe');
     }
 
-
     try {
-      await _apiService.createTransaction(transactionData, null);
+      // --- TAMBAHAN DEBUGGING ---
+      final String? pathUntukDikirim = _imageFile?.path;
+      print("--- [DEBUG-UI] MENCOBA MENGIRIM ---");
+      print("Data Teks: ${jsonEncode(transactionData)}");
+      print("Path Gambar yang akan dikirim: $pathUntukDikirim");
+      // --- AKHIR DEBUGGING ---
+
+      await _apiService.createTransaction(transactionData, pathUntukDikirim);
 
       if (mounted) {
         Navigator.pop(context, true);
@@ -306,8 +316,9 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
       }
     }
   }
-  
 
+  // (Build method dan semua widget UI lainnya tidak berubah)
+  // ...
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -451,8 +462,8 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
                                 borderRadius: BorderRadius.circular(15))),
                         items: [
                           ..._itemList!.map((item) => DropdownMenuItem(
-                              value: item.nama,
-                              child: Text(item.nama),
+                            value: item.nama,
+                            child: Text(item.nama),
                           )),
                           const DropdownMenuItem<String>(
                             value: "Lainnya...",
