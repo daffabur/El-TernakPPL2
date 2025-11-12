@@ -172,7 +172,7 @@ class _CageManagementState extends State<CageManagement> {
       context,
       MaterialPageRoute(
         builder: (_) =>
-            CustomDetailCage(cage: cage),
+            CustomDetailCage(cage: cage, overridePic: _picOverrides[cage.id]),
       ),
     );
 

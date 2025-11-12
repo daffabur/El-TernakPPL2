@@ -113,7 +113,7 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
                 // Jika data berhasil didapat (meski kosong)
                 if (snapshot.hasData) {
                   // Teruskan data ke CustomReportList
-                  return CustomReportList(reports: snapshot.data!.reversed.toList());
+                  return CustomReportList(reports: snapshot.data!);
                 }
 
                 // Kondisi fallback jika terjadi hal aneh

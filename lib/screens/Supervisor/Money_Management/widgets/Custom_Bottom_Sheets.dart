@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
-import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/models/item_stock_model.dart';
 import 'package:el_ternak_ppl2/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,7 +19,6 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
   final ApiService _apiService = ApiService();
   final _formKey = GlobalKey<FormState>();
   final _namaController = TextEditingController();
-  final _manualItemNameController = TextEditingController();
   final _nominalController = TextEditingController();
   final _jumlahController = TextEditingController(text: '1');
   final _catatanController = TextEditingController();
@@ -37,107 +35,36 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
   XFile? _imageFile;
   final ImagePicker _picker = ImagePicker();
 
-
-  final List<String> _kategoriPemasukan = [
+  // DATA & FORMATTERS
+  final List<String> _kategoriList = [
+    "solar",
+    "obat",
+    "pakan",
+    "gaji",
     "panen",
     "penjualan ayam",
     "lainnya",
   ];
-  final List<String> _kategoriPengeluaran = [
-    "solar",
-    "pakan",
-    "ovk",
-    "sekam",
-    "gaji",
-    "lainnya"
-  ];
-
-  List<String> get _activeKategoriList => _isPemasukan ? _kategoriPemasukan : _kategoriPengeluaran;
-
   final currencyFormatter = NumberFormat.currency(
     locale: 'id_ID',
     symbol: 'Rp ',
     decimalDigits: 0,
   );
 
-  List<ItemStockModel>? _itemList;
-  String? _selectedItemName;
-  bool _isItemLoading = false;
-  bool _showManualItemInput = false;
-  Future<void> _fetchPakanType(String itemType) async {
-    setState((){
-      _isItemLoading = true;
-      _itemList = null;
-      _selectedItemName = null;
-    });
-
-    try{
-      final pakan = await _apiService.getPakanByType(itemType);
-      setState(() {
-        _itemList = pakan;
-      });
-    }catch(e){
-      if(mounted){
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: Colors.red,
-              content: Text('Gagal memuat daftar $itemType: ${e.toString().replaceAll("Exception: ", "")}'),
-            )
-        );
-      }
-    }finally{
-      if(mounted){
-        setState(() {
-          _isItemLoading = false;
-        });
-      }
-    }
-  }
-  Future<void> _fetchOvkType(String itemType) async {
-    setState((){
-      _isItemLoading = true;
-      _itemList = null;
-      _selectedItemName = null;
-    });
-
-    try{
-      final ovk = await _apiService.getOvkByType(itemType);
-      setState(() {
-        _itemList = ovk;
-      });
-    }catch(e){
-      if(mounted){
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: Colors.red,
-              content: Text('Gagal memuat daftar $itemType: ${e.toString().replaceAll("Exception: ", "")}'),
-            )
-        );
-      }
-    }finally{
-      if(mounted){
-        setState(() {
-          _isItemLoading = false;
-        });
-      }
-    }
-  }
-
-
   @override
   void initState() {
     super.initState();
     _nominalController.addListener(_updateTotal);
     _jumlahController.addListener(_updateTotal);
-    _updateTotal();
+    _updateTotal(); // Initialize total on load
   }
 
   @override
   void dispose() {
+    // Clean up controllers to prevent memory leaks
     _nominalController.removeListener(_updateTotal);
     _jumlahController.removeListener(_updateTotal);
     _namaController.dispose();
-    _manualItemNameController.dispose();
     _nominalController.dispose();
     _jumlahController.dispose();
     _catatanController.dispose();
@@ -151,8 +78,8 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
     try {
       final pickedFile = await _picker.pickImage(
         source: source,
-        imageQuality: 80,
-        maxWidth: 1024,
+        imageQuality: 80, // Compress image to reduce file size
+        maxWidth: 1024,   // Resize image to save bandwidth
       );
       if (pickedFile != null) {
         setState(() {
@@ -224,64 +151,63 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
     }
   }
 
-
-
   void _handleSave() async {
-    // 1. Validasi semua field dalam form
-    if (!(_formKey.currentState?.validate() ?? false)) {return;
+    // Validate form fields
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_selectedKategori == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.orange,
+          content: Text('Kategori harus dipilih!'),
+        ),
+      );
+      return;
     }
+
     setState(() {
       _isLoading = true;
     });
-    final String transactionTitle = _namaController.text.trim();
-    String specificItemType = ''; // Default string kosong
-    if (_selectedKategori == 'pakan' || _selectedKategori == 'ovk') {
 
-      if (_showManualItemInput) {
-        specificItemType = _manualItemNameController.text.trim();
-      }
-      else if (_selectedItemName != null && _selectedItemName != "Lainnya...") {
-        specificItemType = _selectedItemName!;
-      }
-      if (specificItemType.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.orange,
-            content: Text('Nama item Pakan/OVK harus diisi atau dipilih.'),
-          ),
-        );
-        setState(() { _isLoading = false; });
-        return;
-      }
-    }
-
+    // Prepare data
     final double nominal = double.tryParse(_nominalController.text.replaceAll('.', '')) ?? 0.0;
     final int jumlah = int.tryParse(_jumlahController.text) ?? 1;
     final double total = nominal * jumlah;
-    String isoDateString = _selectedDate.toUtc().toIso8601String();
 
+    // Format date to RFC3339
+    String isoDateString = _selectedDate.toIso8601String();
+    if (isoDateString.endsWith(".000")) {
+      isoDateString = isoDateString.substring(0, isoDateString.length - 4) + "Z";
+    } else if (isoDateString.contains(".")) {
+      isoDateString = isoDateString.split('.')[0] + "Z";
+    }
+
+    // Create data map
     final Map<String, dynamic> transactionData = {
-      "nama": transactionTitle,
-      "tipe": specificItemType,
+      "nama": _namaController.text,
       "jenis": _selectedJenis,
       "kategori": _selectedKategori!,
       "tanggal": isoDateString,
       "nominal": nominal.toInt(),
       "jumlah": jumlah,
       "total": total.toInt(),
-      "catatan": _catatanController.text.trim(),
     };
 
-    if (transactionData['tipe']!.isEmpty) {
-      transactionData.remove('tipe');
+    if (_catatanController.text.trim().isNotEmpty) {
+      transactionData['catatan'] = _catatanController.text.trim();
     }
 
+    final String? imagePath = _imageFile?.path;
+    print("Data yang dikirim ke API: $transactionData");
+    if (imagePath != null) {
+      print("Dengan file gambar di path: $imagePath");
+    }
 
+    // Call API
     try {
-      await _apiService.createTransaction(transactionData, null);
+      await _apiService.createTransaction(transactionData, imagePath);
 
       if (mounted) {
-        Navigator.pop(context, true);
+        Navigator.pop(context, true); // Send 'true' to refresh previous screen
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.green,
@@ -294,7 +220,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.red,
-            content: Text(e.toString()),
+            content: Text('Gagal: ${e.toString().replaceAll("Exception: ", "")}'),
           ),
         );
       }
@@ -306,7 +232,8 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
       }
     }
   }
-  
+
+  // --- UI BUILD METHOD ---
 
   @override
   Widget build(BuildContext context) {
@@ -395,119 +322,12 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
                 value: _selectedKategori,
                 hint: const Text("Pilih Kategori"),
                 decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(15))),
-                items: _activeKategoriList.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+                items: _kategoriList.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
                 validator: (value) => value == null ? 'Kategori harus dipilih' : null,
-                onChanged: (value) {
-                  setState(() {
-                    _selectedKategori = value;
-                    if (value == 'pakan' ) {
-                      _showManualItemInput = false;
-                      _fetchPakanType(value!);
-                    }else if (value == 'ovk'){
-                      _showManualItemInput = false;
-                      _fetchOvkType(value!);
-                    }
-                    else {
-                      _itemList = null;
-                      _selectedItemName = null;
-                      _showManualItemInput = false;
-                      _manualItemNameController.clear();
-                    }
-                  });
-                },
+                onChanged: (value) => setState(() => _selectedKategori = value),
               ),
               const SizedBox(height: 15),
 
-              if (_isItemLoading)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-
-
-              if (!_isItemLoading && _itemList != null)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_itemList!.isEmpty)
-                    // Tampilkan pesan jika data dari API kosong
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange),
-                        ),
-                        child: const Center(
-                          child: Text('Tidak ada data item ditemukan di database.'),
-                        ),
-                      )
-                    else
-                      DropdownButtonFormField<String>(
-                        value: _selectedItemName,
-                        hint: Text("Pilih Jenis ${_selectedKategori ?? ''}"),
-                        decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15))),
-                        items: [
-                          ..._itemList!.map((item) => DropdownMenuItem(
-                              value: item.nama,
-                              child: Text(item.nama),
-                          )),
-                          const DropdownMenuItem<String>(
-                            value: "Lainnya...",
-                            child: Text(
-                              "Lainnya...",
-                              style: TextStyle(fontStyle: FontStyle.italic),
-                            ),
-                          ),
-                        ],
-                        validator: (value) {
-                          if (!_showManualItemInput && value == null) {
-                            return 'Jenis item harus dipilih';
-                          }
-                          return null;
-                        },
-                        onChanged: (value) {
-                          setState(() {
-                            if (value == "Lainnya...") {
-                              _showManualItemInput = true;
-                              _selectedItemName = value;
-                              _manualItemNameController.clear();
-                            } else {
-                              _showManualItemInput = false;
-                              _selectedItemName = value;
-
-                            }
-                          });
-                        },
-                      ),
-                    const SizedBox(height: 15),
-                  ],
-                ),
-              if (_showManualItemInput)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Nama Item Manual", style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _manualItemNameController,
-                      decoration: InputDecoration(
-                        hintText: "cth: Pakan Jenis Baru",
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                      ),
-                      // Validasi bahwa field ini tidak boleh kosong JIKA sedang ditampilkan
-                      validator: (value) {
-                        if (_showManualItemInput && (value == null || value.isEmpty)) {
-                          return 'Nama item manual tidak boleh kosong';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 15),
-                  ],
-                ),
               // Tanggal
               Text("Tanggal", style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
               const SizedBox(height: 6),

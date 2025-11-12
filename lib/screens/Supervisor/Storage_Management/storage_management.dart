@@ -1,6 +1,5 @@
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/models/storage_model.dart';
-import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/widgets/storage_detail.dart';
 import 'package:el_ternak_ppl2/services/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -28,18 +27,6 @@ class _StorageManagementState extends State<StorageManagement> {
     setState(() {
       _storageFuture = _storageService.getStorageData();
     });
-  }
-
-  void _navigateToDetail(String categoryName, IconData categoryIcon) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => StorageDetailScreen(
-          categoryName: categoryName,
-          categoryIcon: categoryIcon,
-        ),
-      ),
-    );
   }
 
   @override
@@ -74,32 +61,38 @@ class _StorageManagementState extends State<StorageManagement> {
                 child: FutureBuilder<Storage>(
                   future: _storageFuture,
                   builder: (context, snapshot) {
+                    // 1. State Loading
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
+
+                    // 2. State Error
                     if (snapshot.hasError) {
                       return Center(
                           child: Text("Gagal memuat: ${snapshot.error}"));
                     }
+
+                    // 3. State Data Tidak Ada
                     if (!snapshot.hasData) {
                       return const Center(
                           child: Text("Data penyimpanan tidak ditemukan."));
                     }
 
+                    // 4. State Sukses (Data Tersedia)
                     final storage = snapshot.data!;
 
                     final List<Map<String, dynamic>> dynamicStorageItems = [
                       {
                         "name": "Pakan",
                         "used": storage.pakanUsed,
-                        "total": storage.pakanStock,
+                        "total": storage.pakanStock ,
                         "icon": Icons.grass,
                         "unit": "Kg"
                       },
                       {
                         "name": "Solar",
                         "used": storage.solarUsed,
-                        "total": storage.solarStock,
+                        "total": storage.solarStock ,
                         "icon": Icons.local_gas_station,
                         "unit": "L"
                       },
@@ -113,7 +106,7 @@ class _StorageManagementState extends State<StorageManagement> {
                       {
                         "name": "Obat",
                         "used": storage.obatUsed,
-                        "total": storage.obatStock,
+                        "total": storage.obatStock ,
                         "icon": Icons.medical_services,
                         "unit": "L"
                       }
@@ -125,18 +118,19 @@ class _StorageManagementState extends State<StorageManagement> {
                         itemCount: dynamicStorageItems.length,
                         itemBuilder: (context, index) {
                           final item = dynamicStorageItems[index];
+
+                          // Hindari pembagian dengan nol jika totalnya 0
                           final double progress = (item['total'] > 0)
                               ? (item['used'] / item['total'].toDouble())
                               : 0.0;
 
-                          Widget cardContent = Stack(
+                          // Tampilkan UI Card Anda dengan data dinamis
+                          return Stack(
                             clipBehavior: Clip.none,
                             children: [
                               Container(
-                                margin:
-                                const EdgeInsets.only(top: 20, bottom: 20),
-                                padding: const EdgeInsets.only(
-                                    top: 36, bottom: 48, left: 36, right: 36),
+                                margin: const EdgeInsets.only(top: 20, bottom: 20),
+                                padding: const EdgeInsets.only(top: 36, bottom: 48, left: 36, right: 36),
                                 decoration: BoxDecoration(
                                   color: AppStyles.highlightColor,
                                   borderRadius: BorderRadius.circular(16),
@@ -161,6 +155,7 @@ class _StorageManagementState extends State<StorageManagement> {
                                     ),
                                     const SizedBox(height: 12),
                                     Text(
+                                      // Gunakan unit yang sudah kita definisikan
                                       "${item['used']} ${item['unit']} / ${item['total']} ${item['unit']}",
                                       style: GoogleFonts.poppins(
                                         color: Colors.white,
@@ -174,8 +169,7 @@ class _StorageManagementState extends State<StorageManagement> {
                                         value: progress,
                                         minHeight: 13,
                                         backgroundColor: Colors.white,
-                                        valueColor:
-                                        AlwaysStoppedAnimation<Color>(
+                                        valueColor: AlwaysStoppedAnimation<Color>(
                                             AppStyles.IconCageCardColor),
                                       ),
                                     ),
@@ -206,20 +200,6 @@ class _StorageManagementState extends State<StorageManagement> {
                               ),
                             ],
                           );
-
-                          if (item['name'] == "Pakan" ||
-                              item['name'] == "Obat") {
-                            return InkWell(
-                              onTap: () => _navigateToDetail(
-                                item['name'],
-                                item['icon'],
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                              child: cardContent,
-                            );
-                          }
-
-                          return cardContent;
                         },
                       ),
                     );

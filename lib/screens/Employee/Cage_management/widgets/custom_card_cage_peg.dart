@@ -74,7 +74,7 @@ class CustomCardCagePeg extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${cage.population} Populasi',
+                            '${cage.population ?? 0} Populasi',
                             style: GoogleFonts.poppins(
                               color: Colors.black54,
                               fontSize: 12,

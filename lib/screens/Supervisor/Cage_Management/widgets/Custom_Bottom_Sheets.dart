@@ -206,7 +206,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
       final items = await _api.getPegawaiOnly();
 
       // Filter aktif (jika field ada; kalau tidak ada, default true)
-      final filtered = items.where((u) => (u.isActive )).toList();
+      final filtered = items.where((u) => (u.isActive ?? true)).toList();
 
       if (!mounted) return;
       setState(() {

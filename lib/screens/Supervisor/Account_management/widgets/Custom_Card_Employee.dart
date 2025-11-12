@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 
 class CustomCardEmployee extends StatelessWidget {
   final User user;
-  final VoidCallback onDataChanged;
-  const CustomCardEmployee({super.key, required this.user,  required this.onDataChanged,});
+
+  const CustomCardEmployee({super.key, required this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +15,7 @@ class CustomCardEmployee extends StatelessWidget {
       onTap: () {
         showModalBottomSheet<bool>(
           context: context,
-          isScrollControlled: true,
+          isScrollControlled: false,
           builder: (context) => Padding(
             padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
             child: CustomBottomSheets(
@@ -25,11 +25,9 @@ class CustomCardEmployee extends StatelessWidget {
           ),
         ).then((result) {
           if (result == true) {
-            onDataChanged();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Daftar akun telah diperbarui.'), duration: Duration(seconds: 2)),
             );
-
           }
 
         });
