@@ -8,7 +8,11 @@
         android:name="${applicationName}"
         android:label="el_ternak_ppl2"
         android:icon="@mipmap/ic_launcher"
+
+        <!-- 🚀 Izinkan akses HTTP non-SSL -->
         android:usesCleartextTraffic="true"
+
+        <!-- optional kalau masih ada legacy storage -->
         android:requestLegacyExternalStorage="true">
 
         <activity

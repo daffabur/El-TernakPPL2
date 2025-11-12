@@ -7,6 +7,11 @@ import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/cage_mo
 import 'package:el_ternak_ppl2/services/cage_services.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:iconify_flutter/iconify_flutter.dart';
+import 'package:iconify_flutter/icons/material_symbols.dart';
+
+// === Tambah: import halaman detail riwayat
+import 'package:el_ternak_ppl2/screens/Employee/Cage_Management/widgets/custom_detail_history_peg.dart';
 
 class CustomDetailCagePeg extends StatefulWidget {
   final Cage cage;

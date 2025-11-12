@@ -110,6 +110,12 @@ class Cage {
     final sekam = _toNum(j['sekam']);
     final obat = _toNum(j['obat']);
 
+    // ===== map empat field tambahan persis dari BE =====
+    final pakan = _toNum(j['pakan']);
+    final solar = _toNum(j['solar']);
+    final sekam = _toNum(j['sekam']);
+    final obat = _toNum(j['obat']);
+
     return Cage(
       id: id,
       name: name,

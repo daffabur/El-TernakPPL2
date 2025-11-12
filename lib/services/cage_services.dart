@@ -1,7 +1,6 @@
 // lib/services/cage_services.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
 import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/cage_model.dart';
 
@@ -15,6 +14,12 @@ class CageService {
   static const Duration _timeout = Duration(seconds: 20);
 
   final _auth = AuthService();
+
+  static int _toInt(dynamic v) {
+    if (v == null) return 0;
+    if (v is int) return v;
+    return int.tryParse(v.toString()) ?? 0;
+  }
 
   // ================= Helpers =================
 
@@ -104,6 +109,8 @@ class CageService {
     return _parseList(_safeDecode(r.body));
   }
 
+  /// Pegawai – ambil 1 kandang yang jadi tanggung jawabnya.
+  /// Mengembalikan list berisi 1 item (atau kosong bila pegawai belum punya kandang).
   Future<List<Cage>> getForEmployee() async {
     try {
       final prof = await http

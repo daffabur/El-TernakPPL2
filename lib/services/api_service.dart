@@ -27,6 +27,7 @@ class ApiService {
     if (token == null) {
       throw Exception('Token not found. Please log in again.');
     }
+    // BE kamu memakai token mentah (bukan "Bearer ...")
     return {
       'Content-Type': 'application/json; charset=UTF-8',
       'Authorization': token,

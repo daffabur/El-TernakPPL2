@@ -3,6 +3,9 @@ import 'package:el_ternak_ppl2/services/api_service.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/models/item_stock_model.dart'; // Model Anda
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+
+enum _InputMode { form, success, none }
 
 enum _InputMode { form, success, none }
 
