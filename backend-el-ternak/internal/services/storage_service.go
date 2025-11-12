@@ -22,3 +22,12 @@ func CheckPakanStock() (bool, error) {
 
 	return status, nil
 }
+
+func GetYearlyReport(tahun string) (*models.StorageReport, error) {
+	reports, err := repository.GetYearlyReport(tahun)
+	if err != nil {
+		return nil, err
+	}
+
+	return reports, nil
+}

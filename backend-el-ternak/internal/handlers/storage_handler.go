@@ -24,3 +24,15 @@ func CheckPakanStock(w http.ResponseWriter, r * http.Request) {
 
 	utils.RespondSuccess(w, http.StatusOK, "berhasil check stock storage", status)
 }
+
+func GetYearlyReport(w http.ResponseWriter, r *http.Request) {
+	tahun := r.URL.Query().Get("tahun")
+	reports, err := services.GetYearlyReport(tahun)
+
+	if err != nil {
+		utils.RespondError(w, http.StatusInternalServerError, "gagal mengambil data tahunan")
+		return
+	}
+
+	utils.RespondSuccess(w, http.StatusOK, "berhasil mengambil data tahunan", reports)
+}
