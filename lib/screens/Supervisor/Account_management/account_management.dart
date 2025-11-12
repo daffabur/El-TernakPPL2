@@ -1,3 +1,4 @@
+// lib/screens/Supervisor/Account_management/account_management.dart
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/models/user_model.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Account_management/widgets/Custom_Bottom_Sheets.dart';
@@ -7,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/line_md.dart';
-import 'package:collection/collection.dart'; // <-- 1. TAMBAHKAN IMPORT INI
+import 'package:collection/collection.dart';
 
 class AccountManagement extends StatefulWidget {
   const AccountManagement({super.key});
@@ -95,7 +96,6 @@ class _AccountManagementState extends State<AccountManagement> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // --- SEKSI PETINGGI ---
                   Padding(
                     padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
                     child: Text('Petinggi',
@@ -103,17 +103,13 @@ class _AccountManagementState extends State<AccountManagement> {
                             fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
                   _buildPetinggiList(petinggi),
-
                   const SizedBox(height: 24),
-
-                  // --- SEKSI PEGAWAI (JUDUL UTAMA) ---
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
                     child: Text('Pegawai',
                         style: GoogleFonts.poppins(
                             fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
-                  // --- DAFTAR PEGAWAI YANG SUDAH DI-FILTER ---
                   _buildGroupedPegawaiList(pegawai),
                 ],
               ),
@@ -153,50 +149,50 @@ class _AccountManagementState extends State<AccountManagement> {
     );
   }
 
-  // --- 2. GANTI FUNGSI LAMA DENGAN FUNGSI BARU INI ---
   Widget _buildGroupedPegawaiList(List<User> pegawai) {
     if (pegawai.isEmpty) {
       return const Text('Tidak ada data pegawai.');
     }
 
-    // Kelompokkan pegawai berdasarkan kandang_id
-    final groupedPegawai = groupBy(pegawai, (User user) => user.kandangId);
+    // --- PERUBAHAN DI SINI: Kelompokkan berdasarkan nama_kandang ---
+    // Jika nama_kandang kosong atau null, kita anggap "Pegawai Tanpa Kandang"
+    final groupedPegawai = groupBy(pegawai, (User user) {
+      if (user.namaKandang == null || user.namaKandang!.isEmpty) {
+        return 'Pegawai Tanpa Kandang';
+      }
+      return user.namaKandang!;
+    });
 
-    // --- PERBAIKAN: Urutkan grup agar "null" selalu di akhir ---
+    // Urutkan grup agar "Pegawai Tanpa Kandang" selalu di akhir
     final sortedEntries = groupedPegawai.entries.toList()
       ..sort((a, b) {
-        if (a.key == null) return 1; // Pindahkan null ke akhir
-        if (b.key == null) return -1; // Pindahkan null ke akhir
-        return a.key!.compareTo(b.key!); // Urutkan sisanya berdasarkan ID
+        if (a.key == 'Pegawai Tanpa Kandang') return 1;
+        if (b.key == 'Pegawai Tanpa Kandang') return -1;
+        return a.key.compareTo(b.key);
       });
 
-    // Bangun UI berdasarkan grup yang sudah diurutkan
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: sortedEntries.map((entry) {
-        final kandangId = entry.key;
+        final groupTitle = entry.key;
         final usersInKandang = entry.value;
-
-        // --- PERBAIKAN: Tentukan nama grup secara dinamis ---
-        final String groupTitle =
-        kandangId == null ? 'Pegawai Tanpa Kandang' : 'Kandang $kandangId';
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Sub-judul untuk setiap kandang
               Text(
-                groupTitle, // Gunakan judul yang sudah dinamis
+                groupTitle,
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: kandangId == null ? Colors.grey.shade700 : Colors.black54,
+                  color: groupTitle == 'Pegawai Tanpa Kandang'
+                      ? Colors.grey.shade700
+                      : Colors.black54,
                 ),
               ),
               const SizedBox(height: 8),
-              // ListView untuk pegawai di grup ini
               ListView.builder(
                 physics: const NeverScrollableScrollPhysics(),
                 shrinkWrap: true,
