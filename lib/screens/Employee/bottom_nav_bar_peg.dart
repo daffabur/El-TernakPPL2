@@ -3,15 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/material_symbols.dart';
 import 'package:iconify_flutter/icons/healthicons.dart';
-
+import 'package:provider/provider.dart'; // <-- 1. TAMBAHKAN IMPORT PROVIDER
+import 'package:el_ternak_ppl2/services/auth_service.dart';
 // Tab pages
 import 'package:el_ternak_ppl2/screens/Employee/Home_Screen/home_screen.dart';
 import 'package:el_ternak_ppl2/screens/Employee/Cage_management/cage_management_peg.dart';
-
-/// Bottom navbar versi Pegawai dengan nested navigators.
-/// - Navbar ini menjadi ROOT (Scaffold tunggal).
-/// - Tiap tab punya Navigator sendiri, sehingga push ke detail
-///   TETAP menampilkan navbar ini (tidak perlu taruh navbar di halaman lain).
 class BottomNavBarPeg extends StatefulWidget {
   const BottomNavBarPeg({super.key});
 
@@ -49,7 +45,6 @@ class _BottomNavBarPegState extends State<BottomNavBarPeg> {
 
   void _onItemTapped(int index) {
     if (_selectedIndex == index) {
-      // Jika tab sama & bisa pop, pop ke root tab
       final nav = _navKeys[index].currentState!;
       while (nav.canPop()) {
         nav.pop();
@@ -79,6 +74,7 @@ class _BottomNavBarPegState extends State<BottomNavBarPeg> {
 
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context, listen: false);
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
@@ -86,7 +82,7 @@ class _BottomNavBarPegState extends State<BottomNavBarPeg> {
         body: IndexedStack(
           index: _selectedIndex,
           children: [
-            _buildTabNavigator(key: _homeNavKey, root: const HomeScreen()),
+            _buildTabNavigator(key: _homeNavKey, root: HomeScreen(onLogout: () => authService.logout(),)),
             _buildTabNavigator(
               key: _cageNavKey,
               root: const CageManagementPeg(),

@@ -1,4 +1,3 @@
-// lib/screens/Employee/Cage_management/cage_management_peg.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -156,7 +155,7 @@ class _CageManagementPegState extends State<CageManagementPeg> {
                           MaterialPageRoute(
                             builder: (_) => CustomDetailCagePeg(cage: cage),
                             settings: RouteSettings(
-                              name: 'emp/cage/detail/${cage.id ?? 'unknown'}',
+                              name: 'emp/cage/detail/${cage.id }',
                             ),
                           ),
                         )

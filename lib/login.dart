@@ -1,8 +1,12 @@
 import 'dart:convert';
+import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
+import 'package:el_ternak_ppl2/base/widgets/app_dialogs.dart';
 import 'package:el_ternak_ppl2/screens/Employee/bottom_nav_bar_peg.dart';
 import 'package:el_ternak_ppl2/services/api_service.dart';
 import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 // Navbar supervisor (atasan)
 import 'package:el_ternak_ppl2/base/bottom_nav_bar.dart';
@@ -24,10 +28,6 @@ class _LoginPageState extends State<LoginPage> {
   bool _isSubmitting = false;
 
   final ApiService _apiService = ApiService();
-  final AuthService _authService = AuthService();
-
-  static const Color orange = Color(0xFFFF7A00);
-  static const Color orangeSoft = Color(0xFFFFC766);
 
   @override
   void dispose() {
@@ -36,12 +36,7 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _showSnack(String msg) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-  }
-
-  // --- Util aman untuk decode payload JWT ---
+  // --- (Fungsi _decodeJwtPayload dan _mapRoleFromPayload tidak diubah) ---
   Map<String, dynamic> _decodeJwtPayload(String token) {
     try {
       final parts = token.split('.');
@@ -55,11 +50,8 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // --- Ambil role dari beberapa kemungkinan field ---
   UserRole _mapRoleFromPayload(Map<String, dynamic> payload) {
     String raw = '';
-
-    // Coba beberapa lokasi/format umum
     if (payload['role'] != null)
       raw = payload['role'].toString();
     else if (payload['Role'] != null)
@@ -71,10 +63,7 @@ class _LoginPageState extends State<LoginPage> {
         (payload['data'] as Map)['role'] != null) {
       raw = (payload['data'] as Map)['role'].toString();
     }
-
     final r = raw.toLowerCase().trim();
-
-    // Sinkronkan sebutan
     if (r == 'pegawai' || r == 'employee' || r == 'karyawan') {
       return UserRole.pegawai;
     }
@@ -83,6 +72,7 @@ class _LoginPageState extends State<LoginPage> {
     }
     return UserRole.unknown;
   }
+  // ---
 
   // === LOGIN ===
   Future<void> _doLogin() async {
@@ -92,28 +82,31 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isSubmitting = true);
 
     try {
-      // 1) minta token
+      // 1) Minta token dari API
       final token = await _apiService.login(
         _username.text.trim(),
         _password.text,
       );
 
-      // 2) simpan token
-      await _authService.saveToken(token);
-
-      // 3) baca role dari payload JWT
+      // 2) Baca role dari payload JWT
       final payload = _decodeJwtPayload(token);
       final role = _mapRoleFromPayload(payload);
 
       if (role == UserRole.unknown) {
-        throw Exception('User role tidak ditemukan pada token.');
+        throw Exception(
+            'Login berhasil, namun role Anda tidak dikenali. Hubungi administrator.');
       }
 
-      if (!mounted) return;
+      // 3) Simpan token DAN role menggunakan Provider
+      if (mounted) {
+        await Provider.of<AuthService>(context, listen: false)
+            .login(token, role.name);
+      }
 
-      // 4) arahkan sesuai role
+      // 4) Navigasi (jika Anda tidak menggunakan Consumer di main.dart)
+      // Kode ini akan langsung mengarahkan pengguna tanpa menunggu rebuild dari Consumer
+      if (!mounted) return;
       if (role == UserRole.pegawai) {
-        // <-- PENTING: arahkan ke NAVBAR PEGAWAI supaya bar-nya muncul
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const BottomNavBarPeg()),
@@ -125,23 +118,25 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } catch (e) {
-      _showSnack(e.toString().replaceAll('Exception: ', ''));
+      final errorMessage = e.toString().replaceAll('Exception: ', '');
+      await AppDialogs.showError(context, title: 'Login Gagal', message: errorMessage);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
+
   InputDecoration _roundedInput(String label) => InputDecoration(
     labelText: label,
-    labelStyle: const TextStyle(color: orange),
+    labelStyle: GoogleFonts.poppins(color: AppStyles.highlightColor),
     contentPadding: const EdgeInsets.symmetric(horizontal: 16),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(30),
-      borderSide: const BorderSide(color: orange),
+      borderSide: BorderSide(color: AppStyles.highlightColor),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(30),
-      borderSide: const BorderSide(color: orange, width: 2),
+      borderSide: BorderSide(color: AppStyles.highlightColor, width: 2),
     ),
     errorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(30),
@@ -173,7 +168,7 @@ class _LoginPageState extends State<LoginPage> {
                 TextFormField(
                   controller: _username,
                   validator: (v) =>
-                      (v == null || v.isEmpty) ? "Username wajib diisi" : null,
+                  (v == null || v.isEmpty) ? "Username wajib diisi" : null,
                   textInputAction: TextInputAction.next,
                   decoration: _roundedInput("Username"),
                 ),
@@ -184,13 +179,13 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _password,
                   obscureText: _obscure,
                   validator: (v) =>
-                      (v == null || v.isEmpty) ? "Password wajib diisi" : null,
+                  (v == null || v.isEmpty) ? "Password wajib diisi" : null,
                   onFieldSubmitted: (_) => _doLogin(),
                   decoration: _roundedInput("Password").copyWith(
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscure ? Icons.visibility : Icons.visibility_off,
-                        color: orange,
+                        color: AppStyles.highlightColor,
                       ),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
@@ -204,27 +199,29 @@ class _LoginPageState extends State<LoginPage> {
                   height: 45,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: orangeSoft,
+                      backgroundColor: AppStyles.highlightColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
                       elevation: 4,
-                      disabledBackgroundColor: orangeSoft.withOpacity(0.6),
+                      disabledBackgroundColor:
+                      AppStyles.highlightColor.withOpacity(0.6),
                     ),
                     onPressed: _isSubmitting ? null : _doLogin,
                     child: _isSubmitting
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            "Login",
-                            style: TextStyle(color: Colors.white, fontSize: 16),
-                          ),
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                        : Text(
+                      "Login",
+                      style: GoogleFonts.poppins(
+                          color: Colors.white, fontSize: 16),
+                    ),
                   ),
                 ),
               ],

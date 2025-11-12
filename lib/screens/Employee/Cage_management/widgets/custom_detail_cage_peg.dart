@@ -1,12 +1,11 @@
-// lib/screens/Employee/Cage_Management/widgets/custom_detail_cage_peg.dart
-import 'dart:io';
-
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/screens/Employee/Cage_Management/widgets/custom_input_harian_card.dart';
+import 'package:el_ternak_ppl2/screens/Employee/Cage_management/widgets/_app_bar.dart';
+import 'package:el_ternak_ppl2/screens/Employee/Cage_management/widgets/_history_section.dart';
+import 'package:el_ternak_ppl2/screens/Employee/Cage_management/widgets/_stat_cards.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/cage_model.dart';
 import 'package:el_ternak_ppl2/services/cage_services.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/material_symbols.dart';
@@ -31,10 +30,8 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
   bool _loading = true;
   String? _error;
 
-  // -> kontrol visibilitas kartu input dari parent
-  bool _hideInput = false;
+  bool _isInputMode = false;
 
-  // ===== Riwayat dari API =====
   List<Laporan> _riwayat = <Laporan>[];
   bool _loadingRiwayat = false;
 
@@ -63,7 +60,6 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
         _loading = false;
       });
 
-      // Setelah detail berhasil, ambil riwayat
       await _loadRiwayat(fresh.id ?? id);
     } catch (e) {
       if (!mounted) return;
@@ -79,7 +75,6 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
     }
   }
 
-  // Gabungkan tanggal (YYYY-MM-DD) + jam (HH:mm) jadi DateTime untuk sorting
   DateTime _combineToDateTime(Laporan lap) {
     try {
       final date = DateTime.parse(lap.tanggalIso ?? '');
@@ -98,9 +93,8 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
     });
     try {
       final items = await _service.getLaporanPerKandang(kandangId);
-      // Sort DESC (terbaru di atas)
       items.sort(
-        (a, b) => _combineToDateTime(b).compareTo(_combineToDateTime(a)),
+            (a, b) => _combineToDateTime(b).compareTo(_combineToDateTime(a)),
       );
 
       if (!mounted) return;
@@ -122,24 +116,16 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  num _numFrom(Map<String, num> m, List<String> keys, {num def = 0}) {
-    for (final k in keys) {
-      if (m.containsKey(k)) return m[k] ?? def;
-    }
-    return def;
-  }
-
-  Future<void> _submitHarian(Map<String, num> data) async {
-    final kematian = _numFrom(data, ['kematian_ayam', 'kematian']);
-    final rataBobot = _numFrom(data, [
-      'rata_bobot_ayam',
-      'ratarata',
-      'ratarat',
-    ]);
-    final pakan = _numFrom(data, ['pakan_used', 'pakan']);
-    final solar = _numFrom(data, ['solar_used', 'solar']);
-    final sekam = _numFrom(data, ['sekam_used', 'sekam']);
-    final obat = _numFrom(data, ['obat_used', 'obat']);
+  Future<void> _submitHarian(Map<String, dynamic> data) async {
+    // Ekstrak data dari payload Map<String, dynamic>
+    final kematian = (data['kematian_ayam'] as num?) ?? 0;
+    final rataBobot = (data['rata_bobot_ayam'] as num?) ?? 0;
+    final pakan = (data['pakan_used'] as num?) ?? 0;
+    final pakanTipe = (data['pakan_tipe'] as String?); // <-- Data baru (String)
+    final solar = (data['solar_used'] as num?) ?? 0;
+    final sekam = (data['sekam_used'] as num?) ?? 0;
+    final obat = (data['obat_used'] as num?) ?? 0;
+    final obatTipe = (data['obat_tipe'] as String?); // <-- Data baru (String)
 
     final id = widget.cage.id ?? _detail?.id ?? -1;
     if (id <= 0) {
@@ -148,6 +134,10 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
     }
 
     try {
+      print("Data Laporan yang akan dikirim (DEBUG):");
+      print("Pakan: $pakanTipe - $pakan kg");
+      print("Obat: $obatTipe - $obat L");
+
       await _service.createLaporan(
         kandangId: id,
         kematianAyam: kematian.toInt(),
@@ -156,20 +146,17 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
         solarUsed: solar,
         sekamUsed: sekam,
         obatUsed: obat,
+        pakanTipe: pakanTipe,
+        obatTipe: obatTipe,
       );
 
       if (!mounted) return;
       _showSnack('Laporan harian BERHASIL dikirim ke server.');
 
-      // === AUTO RELOAD TANPA DELAY ===
-      setState(() {
-        _hideInput = true; // tetap sembunyikan form seperti sebelumnya
-      });
-
-      // Refresh riwayat & angka di kartu statistik secara paralel
+      // Auto-reload data
       await Future.wait([
         _loadRiwayat(id),
-        () async {
+            () async {
           try {
             final fresh = await _service.getById(id);
             if (!mounted) return;
@@ -180,318 +167,62 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
     } catch (e) {
       if (!mounted) return;
       _showSnack('Gagal mengirim laporan: $e');
+      throw Exception('Gagal kirim: $e');
     }
   }
 
-  PreferredSizeWidget _buildAppBar({required String title}) {
-    return AppBar(
-      automaticallyImplyLeading: false,
-      leadingWidth: 48,
-      leading: IconButton(
-        tooltip: 'Kembali',
-        icon: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          color: Color(0xFF3E7B27),
-        ),
-        onPressed: () => Navigator.of(context).maybePop(),
-      ),
-      centerTitle: false,
-      backgroundColor: Colors.white,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      title: Row(
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: AppStyles.primaryColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: const Iconify(
-              MaterialSymbols.home_work_rounded,
-              size: 18,
-              color: Color(0xFF3E7B27),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.poppins(
-                color: AppStyles.primaryColor,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _smallStatCard({
-    required String title,
-    required String value,
-    required String asset,
-    required double assetScale,
-  }) {
+  // (Widget _buildInputTrigger tidak berubah)
+  Widget _buildInputTrigger() {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppStyles.highlightColor,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -10,
-            bottom: -10,
-            child: Opacity(
-              opacity: 1,
-              child: SvgPicture.asset(
-                asset,
-                width: MediaQuery.of(context).size.width * assetScale,
-                height: MediaQuery.of(context).size.width * assetScale,
-                fit: BoxFit.fitHeight,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  value,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 36,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _wideStatCard({
-    required String title,
-    required String value,
-    required String asset,
-    required double assetScale,
-  }) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppStyles.highlightColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Stack(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Positioned(
-            right: -10,
-            bottom: -10,
-            child: Opacity(
-              opacity: 1,
-              child: SvgPicture.asset(
-                asset,
-                width: MediaQuery.of(context).size.width * assetScale,
-                height: MediaQuery.of(context).size.width * assetScale,
-                fit: BoxFit.fitHeight,
+          Text(
+            'Input Data Kandang',
+            style: GoogleFonts.poppins(
+              color: AppStyles.primaryColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() => _isInputMode = true);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppStyles.highlightColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  value,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // =======================
-  //  RIWAYAT LAPORAN (API)
-  // =======================
-  String _formatTanggalIndo(String? iso) {
-    if (iso == null || iso.isEmpty) return '';
-    try {
-      final dt = DateTime.parse(iso); // "yyyy-MM-dd"
-      const bulan = [
-        '',
-        'Januari',
-        'Februari',
-        'Maret',
-        'April',
-        'Mei',
-        'Juni',
-        'Juli',
-        'Agustus',
-        'September',
-        'Oktober',
-        'November',
-        'Desember',
-      ];
-      final b = (dt.month >= 1 && dt.month <= 12)
-          ? bulan[dt.month]
-          : '${dt.month}';
-      return '${dt.day} $b ${dt.year}';
-    } catch (_) {
-      return iso;
-    }
-  }
-
-  // === Riwayat: tap => buka halaman Details (judul "Details")
-  Widget _riwayatSection() {
-    // Ambil 4 terbaru saja
-    final latest4 = _riwayat.take(4).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 8),
-        Text(
-          'Riwayat Laporan',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF2F4F2F),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        if (_loadingRiwayat)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: LinearProgressIndicator(minHeight: 2),
-          )
-        else if (latest4.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
-              'Belum ada riwayat.',
-              style: GoogleFonts.poppins(fontSize: 13.5, color: Colors.black54),
+              'Buat Laporan',
+              style: GoogleFonts.poppins(fontSize: 12),
             ),
-          )
-        else
-          ...latest4.map((lap) {
-            final tgl = _formatTanggalIndo(lap.tanggalIso);
-            final jam = lap.jam ?? '';
-            final ringkas = lap.summary();
-
-            return InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => CustomDetailHistoryPeg(
-                      laporanId: lap.id, // <-- TIDAK kirim kandangName
-                    ),
-                  ),
-                );
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                      color: Colors.black.withOpacity(0.04),
-                    ),
-                  ],
-                  border: Border.all(color: const Color(0xFFECECEC)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              tgl,
-                              style: GoogleFonts.poppins(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF2A2A2A),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.schedule_rounded,
-                                size: 16,
-                                color: Colors.black45,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                jam,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12.5,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        ringkas,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12.5,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }),
-        const SizedBox(height: 20),
-      ],
+          ),
+        ],
+      ),
     );
   }
 
+  // (Widget build() tidak berubah)
   @override
   Widget build(BuildContext context) {
     final cageTitle = (_detail ?? widget.cage).name;
@@ -504,7 +235,7 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: _buildAppBar(title: cageTitle),
+      appBar: DetailAppBar(title: cageTitle),
       body: Stack(
         children: [
           RefreshIndicator(
@@ -514,86 +245,26 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  if (!_hideInput)
+                  if (_isInputMode)
                     CustomInputHarianCard(
                       key: _inputCardKey,
-                      onSubmit: _submitHarian,
-                      submitterName: cage.pic?.name,
-                    ),
-                  if (!_hideInput) const SizedBox(height: 16),
+                      onSubmit: _submitHarian, // <-- Tipe payload sudah diubah
+                      submitterName:
+                      cage.pic?.name ?? cage.pic?.username ?? '-',
+                      onHidden: () {
+                        setState(() => _isInputMode = false);
+                      },
+                    )
+                  else
+                    _buildInputTrigger(),
 
-                  // Kartu Populasi
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: AppStyles.highlightColor,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          right: -10,
-                          bottom: -10,
-                          child: Opacity(
-                            opacity: 1,
-                            child: SvgPicture.asset(
-                              "assets/images/ic_populasi.svg",
-                              width: MediaQuery.of(context).size.width * 0.30,
-                              height: MediaQuery.of(context).size.width * 0.30,
-                              fit: BoxFit.fitHeight,
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 20,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Total Populasi",
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                "${cage.population}",
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontSize: 40,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                "Kematian",
-                                style: GoogleFonts.poppins(color: Colors.white),
-                              ),
-                              Text(
-                                "${cage.deaths}",
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
+                  const SizedBox(height: 16),
+                  PopulationStatCard(cage: cage),
                   const SizedBox(height: 12),
-
                   Row(
                     children: [
                       Expanded(
-                        child: _smallStatCard(
+                        child: SmallStatCard(
                           title: "Sekam digunakan",
                           value: "${cage.sekam ?? 0} kg",
                           asset: "assets/images/ic_sekam.svg",
@@ -602,7 +273,7 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _smallStatCard(
+                        child: SmallStatCard(
                           title: "Solar digunakan",
                           value: "${cage.solar ?? 0} L",
                           asset: "assets/images/ic_solar.svg",
@@ -611,34 +282,35 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 12),
-
-                  _wideStatCard(
+                  WideStatCard(
                     title: "Konsumsi Pakan",
                     value: "${cage.pakan ?? 0} kg",
                     asset: "assets/images/ic_pakan.svg",
                     assetScale: 0.25,
                   ),
-
                   const SizedBox(height: 12),
-
-                  _wideStatCard(
+                  WideStatCard(
                     title: "Obat",
                     value: "${cage.obat ?? 0} L",
                     asset: "assets/images/ic_obat.svg",
                     assetScale: 0.22,
                   ),
-
                   const SizedBox(height: 16),
-
-                  // === RIWAYAT LAPORAN (4 terbaru) + tap => detail ===
-                  _riwayatSection(),
+                  HistorySection(
+                    isLoading: _loadingRiwayat,
+                    historyItems: _riwayat,
+                    onRefresh: () {
+                      final id = _detail?.id ?? widget.cage.id;
+                      if (id != null && id > 0) {
+                        _loadRiwayat(id);
+                      }
+                    },
+                  )
                 ],
               ),
             ),
           ),
-
           if (_loading)
             const Positioned(
               top: 0,
@@ -651,10 +323,11 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
     );
   }
 
+  // (Widget _errorView tidak berubah)
   Widget _errorView(String message) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: _buildAppBar(title: 'Informasi Kandang'),
+      appBar: DetailAppBar(title: 'Informasi Kandang'),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),

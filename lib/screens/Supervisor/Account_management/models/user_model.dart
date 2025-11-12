@@ -1,7 +1,8 @@
+// lib/screens/Supervisor/Account_management/models/user_model.dart
 import 'dart:convert';
 
-
-ApiResponse apiResponseFromJson(String str) => ApiResponse.fromJson(json.decode(str));
+ApiResponse apiResponseFromJson(String str) =>
+    ApiResponse.fromJson(json.decode(str));
 
 class ApiResponse {
   final bool success;
@@ -27,6 +28,9 @@ class User {
   final String role;
   final bool isActive;
   final int? kandangId;
+  final bool isPj;
+  // --- Properti Baru ---
+  final String? namaKandang;
 
   User({
     required this.id,
@@ -34,20 +38,23 @@ class User {
     required this.role,
     required this.isActive,
     this.kandangId,
+    this.isPj = false,
+    // --- Properti Baru ---
+    this.namaKandang,
   });
 
-  // Factory constructor untuk membuat instance User dari JSON
   factory User.fromJson(Map<String, dynamic> json) => User(
     id: json['id'],
     username: json["username"],
     role: json["role"],
     isActive: json["is_active"],
-    kandangId: json['kandangID'],
+    kandangId: json['kandang_id'],
+    isPj: json["is_pj"] ?? false,
+    // --- Parsing nama_kandang ---
+    namaKandang: json["nama_kandang"],
   );
 
   get name => null;
-
   get fullName => null;
-
   get nama => null;
 }
