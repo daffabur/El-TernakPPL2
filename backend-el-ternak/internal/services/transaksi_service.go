@@ -6,11 +6,12 @@ import (
 	"time"
 )
 
-func CreateTransaksi(nama, jenis, kategori string, tanggal time.Time, nominal int, jumlah int, catatan string, linkbukti string, total int) error {
+func CreateTransaksi(nama, jenis, kategori string, tipe *string, tanggal time.Time, nominal int, jumlah int, catatan string, linkbukti string, total int) error {
 	newTransaksi := models.Transaksi{
 		Nama: nama,
 		Jenis: jenis,
 		Kategori: kategori,
+		Tipe: tipe,
 		Tanggal: tanggal,
 		Nominal: nominal,
 		Jumlah: jumlah,
@@ -21,7 +22,7 @@ func CreateTransaksi(nama, jenis, kategori string, tanggal time.Time, nominal in
 
 	var kategoriPtr *string
 
-	if newTransaksi.Jenis == "pengeluaran" && (newTransaksi.Kategori == "pakan" || newTransaksi.Kategori == "obat" || newTransaksi.Kategori == "sekam" || newTransaksi.Kategori == "solar") {
+	if newTransaksi.Jenis == "pengeluaran" && (newTransaksi.Kategori == "pakan" || newTransaksi.Kategori == "ovk" || newTransaksi.Kategori == "sekam" || newTransaksi.Kategori == "solar") {
 		kategoriPtr = &newTransaksi.Kategori
 	}
 
@@ -51,8 +52,8 @@ func GetTransaksiSummary() (*models.TransaksiTotal, error) {
 	return summary, nil
 }
 
-func GetTransaksiFiltered(periode string) ([]models.TransaksiForAll, error) {
-	transaksis, err :=repository.GetTransaksiFiltered(periode)
+func GetTransaksiFiltered(periode, tanggal string) ([]models.TransaksiForAll, error) {
+	transaksis, err :=repository.GetTransaksiFiltered(periode, tanggal)
 	if err != nil {
 		return nil, err
 	}

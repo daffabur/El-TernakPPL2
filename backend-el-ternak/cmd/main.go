@@ -4,6 +4,7 @@ import (
 	"backend-el-ternak/initializers"
 	"backend-el-ternak/internal/config"
 	"backend-el-ternak/internal/handlers"
+	"backend-el-ternak/internal/middleware"
 	"backend-el-ternak/internal/routes"
 	"backend-el-ternak/internal/services/user"
 	"log"
@@ -27,6 +28,7 @@ func main()  {
 		http.Redirect(w, r, "/api/", http.StatusTemporaryRedirect)
 	})
 	
+	r.Use(middleware.EnableCORS)
 	routes.RegisteredRoutes(r)
 
 	log.Println("Server running on port: 11222")

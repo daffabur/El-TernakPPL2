@@ -9,6 +9,7 @@ func CreateKandang(nama string, kapasitas int, id_pj uint) error {
 	newKandang := models.Kandang{
 		Nama: nama,
 		Kapasitas: kapasitas,
+		Populasi: kapasitas,
 	}
 
 	err := repository.CreateKandang(&newKandang, id_pj)

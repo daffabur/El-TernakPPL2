@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 func CreateTransaksi(transaksi *models.Transaksi, kategori *string) error {
@@ -27,11 +29,53 @@ func CreateTransaksi(transaksi *models.Transaksi, kategori *string) error {
 
 		switch transaksi.Kategori {
 		case "pakan":
-			storage.Pakan_stock += transaksi.Jumlah
+			var pakan models.Pakan
+			err := tx.Where("nama = ?", transaksi.Tipe).First(&pakan).Error; 
+
+			if errors.Is(err, gorm.ErrRecordNotFound){
+				pakan = models.Pakan{
+					Nama: *transaksi.Tipe,
+					Stock: transaksi.Jumlah,
+				}
+				if err := tx.Create(&pakan).Error; err != nil {
+					tx.Rollback()
+					return err
+				}
+			} else if err == nil {
+				pakan.Stock += transaksi.Jumlah
+				if err := tx.Where("nama = ?", transaksi.Tipe).Updates(&pakan).Error; err != nil {
+					tx.Rollback()
+					return err
+				}
+			} else {
+				tx.Rollback()
+				return err
+			}
+		case "ovk":
+			var ovk models.Ovk
+			err := tx.Where("nama = ?", transaksi.Tipe).First(&ovk).Error; 
+
+			if errors.Is(err, gorm.ErrRecordNotFound){
+				ovk = models.Ovk{
+					Nama: *transaksi.Tipe,
+					Stock: transaksi.Jumlah,
+				}
+				if err := tx.Create(&ovk).Error; err != nil {
+					tx.Rollback()
+					return err
+				}
+			} else if err == nil {
+				ovk.Stock += transaksi.Jumlah
+				if err := tx.Where("nama = ?", transaksi.Tipe).Updates(&ovk).Error; err != nil {
+					tx.Rollback()
+					return err
+				}
+			} else {
+				tx.Rollback()
+				return err
+			}
 		case "solar":
 			storage.Solar_stock += transaksi.Jumlah
-		case "obat":
-			storage.Obat_stock += transaksi.Jumlah
 		case "sekam":
 			storage.Sekam_stock += transaksi.Jumlah
 		}
@@ -82,7 +126,7 @@ func GetTransaksiSummary() (*models.TransaksiTotal, error) {
 	return &result, nil
 }
 
-func GetTransaksiFiltered(periode string) ([]models.TransaksiForAll, error) {
+func GetTransaksiFiltered(periode, tanggal string) ([]models.TransaksiForAll, error) {
 	var transaksis []models.TransaksiForAll
 	var startDate, endDate time.Time
 	now := time.Now()
@@ -102,6 +146,14 @@ func GetTransaksiFiltered(periode string) ([]models.TransaksiForAll, error) {
 	case "bulan_ini":
 		startDate = time.Date(now.Year(), now.Month(),1 , 0, 0, 0, 0, now.Location())
 		endDate = startDate.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	case "per_hari":
+		parsedDate, err := time.Parse("2006-01-02", tanggal)
+		if err != nil {
+			return nil, fmt.Errorf("format tanggal tidak valid, gunakan YYYY-MM-DD")
+		}
+
+		startDate = time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 0, 0, 0, 0, parsedDate.Location())
+		endDate = startDate.Add(24 * time.Hour)
 	}
 	err := config.DB.Model(&models.Transaksi{}).
 	Select("id", "tanggal", "nama", "jenis", "kategori", "total").

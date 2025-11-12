@@ -16,9 +16,11 @@ type CreateLaporanData struct {
 	Ratabobot float32 `json:"rata_bobot_ayam"`
 	Kematian int `json:"kematian_ayam"`
 	Pakan int `json:"pakan_used"`
+	Pakan_tipe string `json:"pakan_tipe"`
 	Solar int `json:"solar_used"`
 	Sekam int `json:"sekam_used"`
 	Obat int `json:"obat_used"`
+	Obat_tipe string `json:"obat_tipe"`
 }
 
 func CreateLaporan(w http.ResponseWriter, r *http.Request) {
@@ -28,7 +30,7 @@ func CreateLaporan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := services.CreateLaporan(data.Created_by, data.KandangID, float32(data.Ratabobot), data.Kematian, data.Pakan, data.Solar, data.Sekam, data.Obat)
+	err := services.CreateLaporan(data.Created_by, data.KandangID, float32(data.Ratabobot), data.Kematian, data.Pakan, data.Solar, data.Sekam, data.Obat, data.Pakan_tipe, data.Obat_tipe)
 	if err != nil {
 		utils.RespondError(w, http.StatusBadRequest, "internal server error")
 		return
@@ -39,6 +41,38 @@ func CreateLaporan(w http.ResponseWriter, r *http.Request) {
 
 func GetLaporanHandler(w http.ResponseWriter, r *http.Request) {
 	kandang_idStr := r.URL.Query().Get("kandang")
+	periode := r.URL.Query().Get("periode")
+	tanggal := r.URL.Query().Get("tanggal")
+
+	if periode != "" {
+		idUint, err := strconv.ParseUint(kandang_idStr, 10, 64)
+		if err != nil {
+			utils.RespondError(w, http.StatusBadRequest, "invalid request")
+			return
+		}
+
+		id := uint(idUint)
+		validPeriode := map[string]bool{
+			"hari_ini" : true,
+			"minggu_ini" : true,
+			"bulan_ini" : true,
+			"per_hari" : true,
+		}
+
+		if !validPeriode[periode]{
+			utils.RespondError(w, http.StatusBadRequest, "periode tidak valid")
+			return
+		}
+
+		laporans, err := services.GetLaporanFiltered(id, periode, tanggal)
+		if err != nil {
+			utils.RespondError(w, http.StatusInternalServerError, "gagal mengambil data laporan")
+			return
+		}
+
+		utils.RespondSuccess(w, http.StatusOK, "berhasil mengambil data laporan", laporans)
+		return
+	}
 
 	if kandang_idStr != "" {
 		idUint, err := strconv.ParseUint(kandang_idStr, 10, 64)
