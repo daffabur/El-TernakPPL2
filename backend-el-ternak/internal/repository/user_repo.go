@@ -38,9 +38,11 @@ func GetUserById(id int) (*models.UserSummary, error) {
 
 func GetAllUser() ([]models.UserSummary, error) {
 	var users []models.UserSummary
-	err := config.DB.Model(&models.User{}).
-	Select("username", "role", "is_active").
-	Find(&users).Error
+	err := config.DB.Table("users").
+		Select(`users.id, users.username, users.role, users.is_active, users.is_pj,
+		        users.kandang_id, kandangs.nama AS nama_kandang`).
+		Joins(`LEFT JOIN kandangs ON users.kandang_id = kandangs.id`).
+		Scan(&users).Error
 	
 	if err != nil {
 		return nil, err
