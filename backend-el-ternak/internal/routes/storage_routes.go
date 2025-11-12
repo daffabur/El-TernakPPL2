@@ -18,4 +18,8 @@ func StorageRoutes(r *mux.Router){
 	storage.Handle("/checkPakan", middleware.JwtMiddleware(
 		middleware.RoleMiddleware("petinggi")(http.HandlerFunc(handlers.CheckPakanStock)),
 	)).Methods("GET")
+
+	storage.Handle("/report", middleware.JwtMiddleware(
+		middleware.RoleMiddleware("petinggi")(http.HandlerFunc(handlers.GetYearlyReport)),
+	)).Methods("GET")
 }

@@ -81,3 +81,103 @@ func CheckPakanStock() (bool, error) {
 
 	return false, nil
 }
+
+func GetYearlyReport(tahun string) (*models.StorageReport, error) {
+	type Result struct {
+		Bulan      int
+		PakanUsed  int
+		SolarUsed  int
+		SekamUsed  int
+		ObatUsed   int
+	}
+
+	var results []Result
+
+	query := `
+		SELECT 
+			EXTRACT(MONTH FROM created_at)::INT AS bulan,
+			COALESCE(SUM(pakan_used), 0) AS pakan_used,
+			COALESCE(SUM(solar_used), 0) AS solar_used,
+			COALESCE(SUM(sekam_used), 0) AS sekam_used,
+			COALESCE(SUM(obat_used), 0) AS obat_used
+		FROM laporans
+		WHERE EXTRACT(YEAR FROM created_at) = ?
+		GROUP BY bulan
+		ORDER BY bulan ASC
+	`
+
+	if err := config.DB.Raw(query, tahun).Scan(&results).Error; err != nil {
+		return nil, err
+	}
+
+	report := &models.StorageReport{Tahun: tahun}
+
+	for _, r := range results {
+		switch r.Bulan {
+		case 1:
+			report.Pakan.Januari = r.PakanUsed
+			report.Solar.Januari = r.SolarUsed
+			report.Sekam.Januari = r.SekamUsed
+			report.OVK.Januari = r.ObatUsed
+		case 2:
+			report.Pakan.Februari = r.PakanUsed
+			report.Solar.Februari = r.SolarUsed
+			report.Sekam.Februari = r.SekamUsed
+			report.OVK.Februari = r.ObatUsed
+		case 3:
+			report.Pakan.Maret = r.PakanUsed
+			report.Solar.Maret = r.SolarUsed
+			report.Sekam.Maret = r.SekamUsed
+			report.OVK.Maret = r.ObatUsed
+		case 4:
+			report.Pakan.April = r.PakanUsed
+			report.Solar.April = r.SolarUsed
+			report.Sekam.April = r.SekamUsed
+			report.OVK.April = r.ObatUsed
+		case 5:
+			report.Pakan.Mei = r.PakanUsed
+			report.Solar.Mei = r.SolarUsed
+			report.Sekam.Mei = r.SekamUsed
+			report.OVK.Mei = r.ObatUsed
+		case 6:
+			report.Pakan.Juni = r.PakanUsed
+			report.Solar.Juni = r.SolarUsed
+			report.Sekam.Juni = r.SekamUsed
+			report.OVK.Juni = r.ObatUsed
+		case 7:
+			report.Pakan.Juli = r.PakanUsed
+			report.Solar.Juli = r.SolarUsed
+			report.Sekam.Juli = r.SekamUsed
+			report.OVK.Juli = r.ObatUsed
+		case 8:
+			report.Pakan.Agustus = r.PakanUsed
+			report.Solar.Agustus = r.SolarUsed
+			report.Sekam.Agustus = r.SekamUsed
+			report.OVK.Agustus = r.ObatUsed
+		case 9:
+			report.Pakan.September = r.PakanUsed
+			report.Solar.September = r.SolarUsed
+			report.Sekam.September = r.SekamUsed
+			report.OVK.September = r.ObatUsed
+		case 10:
+			report.Pakan.Oktober = r.PakanUsed
+			report.Solar.Oktober = r.SolarUsed
+			report.Sekam.Oktober = r.SekamUsed
+			report.OVK.Oktober = r.ObatUsed
+		case 11:
+			report.Pakan.November = r.PakanUsed
+			report.Solar.November = r.SolarUsed
+			report.Sekam.November = r.SekamUsed
+			report.OVK.November = r.ObatUsed
+		case 12:
+			report.Pakan.Desember = r.PakanUsed
+			report.Solar.Desember = r.SolarUsed
+			report.Sekam.Desember = r.SekamUsed
+			report.OVK.Desember = r.ObatUsed
+		default:
+			fmt.Println("Unknown month:", r.Bulan)
+		}
+	}
+
+	return report, nil
+}
