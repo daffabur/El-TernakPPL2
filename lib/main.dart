@@ -1,3 +1,5 @@
+// lib/main.dart
+
 import 'package:el_ternak_ppl2/base/bottom_nav_bar.dart';
 import 'package:el_ternak_ppl2/screens/Employee/bottom_nav_bar_peg.dart';
 import 'package:flutter/material.dart';
@@ -43,14 +45,11 @@ class ElTernakApp extends StatelessWidget {
         Locale('id', 'ID'),
       ],
       locale: const Locale('id', 'ID'),
-      // Gunakan AuthWrapper sebagai home
       home: const AuthWrapper(),
     );
   }
 }
 
-/// Widget baru ini bertugas menangani logika "booting" aplikasi.
-/// Ia akan mencoba auto-login SATU KALI, lalu menampilkan UI yang sesuai.
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
@@ -68,19 +67,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   Future<void> _checkAutoLogin() async {
-    // Ambil AuthService (listen: false aman di initState)
     final authService = Provider.of<AuthService>(context, listen: false);
 
-    // Coba auto-login, tidak peduli berhasil atau tidak,
-    // kita hentikan loading setelah selesai.
     try {
       await authService.tryAutoLogin();
     } catch (e) {
-      // Tangani error jika ada
       print("Error during auto-login: $e");
     }
 
-    // Set _isLoading ke false setelah selesai
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -90,35 +84,38 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Selama proses pengecekan auto-login, tampilkan loading
+    // 1. Tampilkan loading screen saat cek auto-login
     if (_isLoading) {
       return const SplashScreen();
     }
 
-    // 2. Setelah selesai, gunakan Consumer untuk mendengarkan perubahan state
-    //    Ini adalah logika Consumer Anda yang lama, tapi tanpa FutureBuilder.
+    // 2. Gunakan Consumer untuk mendengarkan perubahan state
     return Consumer<AuthService>(
       builder: (context, auth, _) {
-        // Log untuk debugging (bisa dihapus nanti)
         print("[AuthWrapper] Rebuilding: isAuth=${auth.isAuth}, role=${auth.role}");
 
-        // 3. Jika pengguna sudah login
+        // 3. Jika pengguna SUDAH login
         if (auth.isAuth) {
+
+          // --- PERBAIKAN LOGIKA DI SINI ---
+          // Logika ini robust terhadap race condition.
+          // Jika 'isAuth' benar, kita PASTI tunjukkan salah satu dashboard.
+
           if (auth.role == 'pegawai') {
             return const BottomNavBarPeg();
           } else {
             return const BottomNavBar();
           }
+          // --- AKHIR PERBAIKAN ---
         }
 
-        // 4. Jika pengguna TIDAK login
+        // 4. Jika pengguna TIDAK login (auth.isAuth == false)
         return const LoginPage();
       },
     );
   }
 }
 
-/// Widget sederhana untuk menampilkan loading indicator.
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
@@ -131,4 +128,3 @@ class SplashScreen extends StatelessWidget {
     );
   }
 }
-

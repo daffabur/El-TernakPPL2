@@ -1,14 +1,17 @@
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:el_ternak_ppl2/login.dart';
 import 'package:el_ternak_ppl2/screens/Employee/Cage_Management/widgets/custom_detail_cage_peg.dart';
-// Import model Laporan dari CageService
 import 'package:el_ternak_ppl2/services/cage_services.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/cage_model.dart';
 import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+
+// --- IMPORT WIDGET & SCREEN PENDUKUNG ---
+import 'package:el_ternak_ppl2/screens/Employee/Cage_management/widgets/activity_report_card.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/widgets/Custom_detail_report.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onLogout;
@@ -22,18 +25,18 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // --- Services ---
   final CageService _cageService = CageService();
 
-  // --- State ---
   Cage? _cage;
+  List<Laporan> _riwayatLaporan = []; // Menyimpan list laporan untuk aktivitas
   bool _isLoading = true;
   String? _error;
 
   bool _sudahInputHariIni = false;
   Laporan? _laporanTerakhir;
+  int _hariKe = 1; // Masih dummy/hardcoded karena belum ada logic siklus
 
-  String get _employeeName => 'Ehsan Bin Mail'; // TODO: Masih dummy
+
   DateTime get _today => DateTime.now();
 
   @override
@@ -42,8 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadData();
   }
 
-  // --- HELPER BARU UNTUK SORTING ---
-  // (Disalin dari CustomDetailCagePeg)
+  // Helper tanggal
   DateTime _combineToDateTime(Laporan lap) {
     try {
       final date = DateTime.parse(lap.tanggalIso ?? '');
@@ -52,10 +54,9 @@ class _HomeScreenState extends State<HomeScreen> {
       final m = int.tryParse(hhmm.elementAt(1)) ?? 0;
       return DateTime(date.year, date.month, date.day, h, m);
     } catch (_) {
-      return DateTime.fromMillisecondsSinceEpoch(0); // Paling lama
+      return DateTime.fromMillisecondsSinceEpoch(0);
     }
   }
-  // --- AKHIR HELPER BARU ---
 
   bool _isToday(DateTime date) {
     final now = DateTime.now();
@@ -70,7 +71,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    // Riwayat SEKARANG sudah di-sort, jadi .first adalah yang terbaru
     final laporanTerbaru = riwayat.first;
     DateTime tanggalLaporan;
 
@@ -106,31 +106,25 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      // API #1: Ambil data kandang
       final cages = await _cageService.getForEmployee();
       if (!mounted) return;
 
       if (cages.isNotEmpty) {
         final cage = cages.first;
-
-        // API #2: Ambil riwayat laporan
-        final riwayat = await _cageService.getLaporanPerKandang(cage.id!);
+        final riwayat = await _cageService.getLaporanPerKandang(cage.id);
         if (!mounted) return;
 
-        // --- PERBAIKAN: LAKUKAN SORTING DI SINI ---
-        // Urutkan riwayat (DESC) agar laporan terbaru ada di [0]
+        // Urutkan: Terbaru di atas
         riwayat.sort(
               (a, b) => _combineToDateTime(b).compareTo(_combineToDateTime(a)),
         );
-        // --- AKHIR PERBAIKAN ---
 
-        // Set state utama
         setState(() {
           _cage = cage;
+          _riwayatLaporan = riwayat; // Simpan untuk list Aktivitas
           _isLoading = false;
         });
 
-        // Cek status input (sekarang dengan data yang sudah di-sort)
         _checkInputStatus(riwayat);
       } else {
         setState(() {
@@ -154,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) => CustomDetailCagePeg(cage: _cage!),
       ),
     ).then((_) {
-      _loadData();
+      _loadData(); // Refresh saat kembali
     });
   }
 
@@ -191,6 +185,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final green = AppStyles.highlightColor;
+    final String employeeName =
+        context.watch<AuthService>().username ?? 'Pegawai';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -211,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(width: 10),
             Text(
-              _employeeName,
+              employeeName,
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
@@ -245,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildContent(BuildContext context, Color green) {
     final cage = _cage!;
 
-    // Data ringkasan sekarang dinamis dari _laporanTerakhir
+    // Data Ringkasan Harian
     final int kematianHarian = _laporanTerakhir?.mati ?? 0;
     final String pakanHarian = "${_laporanTerakhir?.pakan ?? 0} kg";
     final String sekamHarian = "${_laporanTerakhir?.sekam ?? 0} kg";
@@ -260,7 +256,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ===== Kartu "Hari ke-1" + CTA Input =====
+            // 1. KARTU TUGAS HARI INI
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -347,7 +343,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 16),
 
-            // ===== Kartu rekap harian (hijau) =====
+            // 2. KARTU REKAP HARIAN (HIJAU)
             Container(
               decoration: BoxDecoration(
                 color: green,
@@ -369,7 +365,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const Spacer(),
-                      // --- DATA DINAMIS (JAM) ---
                       Text(
                         jamLaporan,
                         style: GoogleFonts.poppins(
@@ -380,7 +375,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  // --- DATA DINAMIS (RINGKASAN) ---
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -396,7 +390,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 12),
 
-            // ===== 2 kartu kecil =====
+            // 3. TWIN CARDS (Populasi & Kematian Total)
             Row(
               children: [
                 Expanded(
@@ -419,25 +413,78 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 24),
 
-            // ===== Placeholder chart =====
-            Container(
-              height: 325,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: green,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                'Chart / Ringkasan Visual',
-                style: GoogleFonts.poppins(
-                  color: Colors.white70,
-                  fontSize: 14,
-                ),
+            // 4. AKTIVITAS KANDANG (NEW UI SECTION)
+            Text(
+              'Aktivitas Kandang',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
               ),
             ),
+            const SizedBox(height: 12),
+
+            if (_riwayatLaporan.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  children: [
+                    Icon(Icons.history_edu_rounded, size: 32, color: Colors.grey.shade400),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Belum ada aktivitas laporan.",
+                      style: GoogleFonts.poppins(color: Colors.grey.shade500),
+                    ),
+                  ],
+                ),
+              )
+            else
+            // Menampilkan 5 laporan terbaru saja
+              Column(
+                children: _riwayatLaporan.take(5).map((report) {
+                  // Format Tanggal & Jam
+                  DateTime dateTime = DateTime.now();
+                  try {
+                    if (report.tanggalIso != null) {
+                      dateTime = DateTime.parse("${report.tanggalIso} ${report.jam}");
+                    }
+                  } catch (_) {}
+
+                  final formattedDate = DateFormat('dd MMMM yyyy', 'id_ID').format(dateTime);
+                  final formattedTime = report.jam ?? "--:--";
+
+                  // Format Summary
+                  // (Sesuaikan dengan style summary yang Anda inginkan di kartu baru)
+                  final summaryText = report.summary();
+
+                  return ActivityReportCard(
+                    userName: report.pencatat ?? "User",
+                    kandangName: cage.name,
+                    summary: summaryText, // e.g. "Bobot 1.3 kg | Mati: 4..."
+                    date: formattedDate,
+                    time: formattedTime,
+                    onTap: () {
+                      // Navigasi ke detail laporan
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CustomDetailReport(
+                            reportId: report.id,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }).toList(),
+              ),
           ],
         ),
       ),
@@ -511,7 +558,6 @@ class _HomeScreenState extends State<HomeScreen> {
             bottom: -6,
             child: Opacity(
               opacity: 0.9,
-              child: SvgPicture.asset(asset, width: 52, height: 52),
             ),
           ),
           Column(
@@ -563,18 +609,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _formatTanggal(DateTime d) {
     const bulan = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
     ];
     return '${d.day} ${bulan[d.month - 1]} ${d.year}';
   }

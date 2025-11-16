@@ -57,50 +57,60 @@ class ApiService {
 
   // ================== Auth ==================
 
-  Future<String> login(String username, String password) async {
-    final response = await http.post(
+  Future<Map<String, String>> login(String username, String password) async {
+    // --- LANGKAH 1: PANGGIL /auth/login ---
+    final loginResponse = await http.post(
       Uri.parse('${_baseUrl}auth/login'),
       headers: {'Content-Type': 'application/json; charset=UTF-8'},
       body: jsonEncode({'username': username, 'password': password}),
     );
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseBody = _safeDecode(response.body);
-      final String? token = responseBody['data']?['token'];
-      if (token != null && token.isNotEmpty) {
-        return token;
-      } else {
-        throw Exception('Respons login tidak valid: token tidak ditemukan.');
-      }
-    } else {
-        String serverMessage = 'Terjadi kesalahan. Coba lagi nanti';
-        try{
-          final Map<String, dynamic> responseBody = _safeDecode(response.body);
-          serverMessage = responseBody['message'] ?? 'Pesan error tidak ditemukan di server.';
-        }catch (_) {
-          print("Gagal membaca body JSON dari respons error. Status: ${response.statusCode}");
-        }
-        switch (response.statusCode) {
-          case 401:
-          case 400:
-            throw Exception(
-                serverMessage.contains('Pesan error tidak ditemukan')
-                    ? 'Username atau password salah.'
-                    : serverMessage);
-          case 403:
-            throw Exception('Anda tidak memiliki hak akses untuk masuk.');
-          case 404:
-            throw Exception(
-                'Endpoint login tidak ditemukan. Hubungi developer.');
-          case 500:
-            throw Exception(
-                'Server sedang mengalami masalah. Coba lagi beberapa saat.');
-
-          default:
-            throw Exception(
-                'Gagal login dengan status: ${response.statusCode}');
-        }
+    if (loginResponse.statusCode != 200) {
+      // (Logika error handling Anda untuk login gagal)
+      String serverMessage = 'Username atau password salah.';
+      try{
+        final Map<String, dynamic> responseBody = _safeDecode(loginResponse.body);
+        serverMessage = responseBody['message'] ?? 'Pesan error tidak ditemukan di server.';
+      } catch (_) {}
+      throw Exception(serverMessage);
     }
+
+    // Ekstrak token dan role dari respons login
+    final Map<String, dynamic> loginBody = _safeDecode(loginResponse.body);
+    final String? token = loginBody['data']?['token'];
+    final String? role = loginBody['data']?['role'];
+
+    if (token == null || token.isEmpty || role == null || role.isEmpty) {
+      throw Exception('Respons login tidak valid: token atau role tidak ditemukan.');
+    }
+
+    // --- LANGKAH 2: PANGGIL /account/me ---
+    // Gunakan token yang BARU saja didapat untuk memanggil /account/me
+    final meResponse = await http.get(
+      Uri.parse('${_baseUrl}account/me'),
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': token, // Kirim token baru
+      },
+    );
+
+    if (meResponse.statusCode != 200) {
+      throw Exception('Login berhasil, tapi gagal memuat profil user.');
+    }
+
+    final Map<String, dynamic> meBody = _safeDecode(meResponse.body);
+    final String? usernameFromMe = meBody['data']?['username'];
+
+    if (usernameFromMe == null || usernameFromMe.isEmpty) {
+      throw Exception('Profil user tidak valid: username tidak ditemukan.');
+    }
+
+    // --- LANGKAH 3: Kembalikan semua data ---
+    return {
+      'token': token,
+      'role': role,
+      'username': usernameFromMe,
+    };
   }
 
   // ================== Manage Account ==================

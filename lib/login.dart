@@ -7,9 +7,10 @@ import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-
-// Navbar supervisor (atasan)
 import 'package:el_ternak_ppl2/base/bottom_nav_bar.dart';
+import 'package:el_ternak_ppl2/screens/Employee/bottom_nav_bar_peg.dart';
+
+
 
 enum UserRole { atasan, pegawai, unknown }
 
@@ -37,41 +38,41 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   // --- (Fungsi _decodeJwtPayload dan _mapRoleFromPayload tidak diubah) ---
-  Map<String, dynamic> _decodeJwtPayload(String token) {
-    try {
-      final parts = token.split('.');
-      if (parts.length != 3) throw const FormatException('Invalid token');
-      final normalized = base64Url.normalize(parts[1]);
-      final payloadStr = utf8.decode(base64Url.decode(normalized));
-      final jsonMap = json.decode(payloadStr);
-      return (jsonMap is Map<String, dynamic>) ? jsonMap : <String, dynamic>{};
-    } catch (_) {
-      return <String, dynamic>{};
-    }
-  }
+  // Map<String, dynamic> _decodeJwtPayload(String token) {
+  //   try {
+  //     final parts = token.split('.');
+  //     if (parts.length != 3) throw const FormatException('Invalid token');
+  //     final normalized = base64Url.normalize(parts[1]);
+  //     final payloadStr = utf8.decode(base64Url.decode(normalized));
+  //     final jsonMap = json.decode(payloadStr);
+  //     return (jsonMap is Map<String, dynamic>) ? jsonMap : <String, dynamic>{};
+  //   } catch (_) {
+  //     return <String, dynamic>{};
+  //   }
+  // }
 
-  UserRole _mapRoleFromPayload(Map<String, dynamic> payload) {
-    String raw = '';
-    if (payload['role'] != null)
-      raw = payload['role'].toString();
-    else if (payload['Role'] != null)
-      raw = payload['Role'].toString();
-    else if (payload['roles'] is List &&
-        (payload['roles'] as List).isNotEmpty) {
-      raw = (payload['roles'] as List).first.toString();
-    } else if (payload['data'] is Map &&
-        (payload['data'] as Map)['role'] != null) {
-      raw = (payload['data'] as Map)['role'].toString();
-    }
-    final r = raw.toLowerCase().trim();
-    if (r == 'pegawai' || r == 'employee' || r == 'karyawan') {
-      return UserRole.pegawai;
-    }
-    if (r == 'petinggi' || r == 'atasan' || r == 'supervisor' || r == 'admin') {
-      return UserRole.atasan;
-    }
-    return UserRole.unknown;
-  }
+  // UserRole _mapRoleFromPayload(Map<String, dynamic> payload) {
+  //   String raw = '';
+  //   if (payload['role'] != null)
+  //     raw = payload['role'].toString();
+  //   else if (payload['Role'] != null)
+  //     raw = payload['Role'].toString();
+  //   else if (payload['roles'] is List &&
+  //       (payload['roles'] as List).isNotEmpty) {
+  //     raw = (payload['roles'] as List).first.toString();
+  //   } else if (payload['data'] is Map &&
+  //       (payload['data'] as Map)['role'] != null) {
+  //     raw = (payload['data'] as Map)['role'].toString();
+  //   }
+  //   final r = raw.toLowerCase().trim();
+  //   if (r == 'pegawai' || r == 'employee' || r == 'karyawan') {
+  //     return UserRole.pegawai;
+  //   }
+  //   if (r == 'petinggi' || r == 'atasan' || r == 'supervisor' || r == 'admin') {
+  //     return UserRole.atasan;
+  //   }
+  //   return UserRole.unknown;
+  // }
   // ---
 
   // === LOGIN ===
@@ -82,41 +83,40 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isSubmitting = true);
 
     try {
-      // 1) Minta token dari API
-      final token = await _apiService.login(
+      // 1) Panggil fungsi login 2-langkah dari ApiService
+      final Map<String, String> loginData = await _apiService.login(
         _username.text.trim(),
         _password.text,
       );
 
-      // 2) Baca role dari payload JWT
-      final payload = _decodeJwtPayload(token);
-      final role = _mapRoleFromPayload(payload);
+      final String token = loginData['token']!;
+      final String role = loginData['role']!;
+      final String username = loginData['username']!;
 
-      if (role == UserRole.unknown) {
-        throw Exception(
-            'Login berhasil, namun role Anda tidak dikenali. Hubungi administrator.');
-      }
-
-      // 3) Simpan token DAN role menggunakan Provider
+      // 2) Simpan SEMUA data ke AuthService
       if (mounted) {
         await Provider.of<AuthService>(context, listen: false)
-            .login(token, role.name);
+            .login(token, role, username);
       }
 
-      // 4) Navigasi (jika Anda tidak menggunakan Consumer di main.dart)
-      // Kode ini akan langsung mengarahkan pengguna tanpa menunggu rebuild dari Consumer
+      // 3) --- KEMBALIKAN NAVIGASI MANUAL ---
+      // Ini adalah cara "brute force" untuk memastikan state lama
+      // (dari logout sebelumnya) hancur total.
       if (!mounted) return;
-      if (role == UserRole.pegawai) {
+
+      if (role == 'pegawai') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const BottomNavBarPeg()),
         );
-      } else {
+      } else { // Asumsi 'petinggi' atau role lain
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const BottomNavBar()),
         );
       }
+      // --- AKHIR REVISI ---
+
     } catch (e) {
       final errorMessage = e.toString().replaceAll('Exception: ', '');
       await AppDialogs.showError(context, title: 'Login Gagal', message: errorMessage);
@@ -124,7 +124,6 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
-
 
   InputDecoration _roundedInput(String label) => InputDecoration(
     labelText: label,
