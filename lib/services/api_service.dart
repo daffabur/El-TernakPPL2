@@ -58,8 +58,9 @@ class ApiService {
 
   // ================== Auth ==================
 
-  Future<String> login(String username, String password) async {
-    final response = await http.post(
+  Future<Map<String, String>> login(String username, String password) async {
+    // --- LANGKAH 1: PANGGIL /auth/login ---
+    final loginResponse = await http.post(
       Uri.parse('${_baseUrl}auth/login'),
       headers: {'Content-Type': 'application/json; charset=UTF-8'},
       body: jsonEncode({'username': username, 'password': password}),
@@ -105,6 +106,43 @@ class ApiService {
           throw Exception('Gagal login dengan status: ${response.statusCode}');
       }
     }
+
+    // Ekstrak token dan role dari respons login
+    final Map<String, dynamic> loginBody = _safeDecode(loginResponse.body);
+    final String? token = loginBody['data']?['token'];
+    final String? role = loginBody['data']?['role'];
+
+    if (token == null || token.isEmpty || role == null || role.isEmpty) {
+      throw Exception('Respons login tidak valid: token atau role tidak ditemukan.');
+    }
+
+    // --- LANGKAH 2: PANGGIL /account/me ---
+    // Gunakan token yang BARU saja didapat untuk memanggil /account/me
+    final meResponse = await http.get(
+      Uri.parse('${_baseUrl}account/me'),
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': token, // Kirim token baru
+      },
+    );
+
+    if (meResponse.statusCode != 200) {
+      throw Exception('Login berhasil, tapi gagal memuat profil user.');
+    }
+
+    final Map<String, dynamic> meBody = _safeDecode(meResponse.body);
+    final String? usernameFromMe = meBody['data']?['username'];
+
+    if (usernameFromMe == null || usernameFromMe.isEmpty) {
+      throw Exception('Profil user tidak valid: username tidak ditemukan.');
+    }
+
+    // --- LANGKAH 3: Kembalikan semua data ---
+    return {
+      'token': token,
+      'role': role,
+      'username': usernameFromMe,
+    };
   }
 
   // ================== Manage Account ==================

@@ -1,3 +1,5 @@
+// lib/main.dart
+
 import 'package:el_ternak_ppl2/base/bottom_nav_bar.dart';
 import 'package:el_ternak_ppl2/screens/Employee/bottom_nav_bar_peg.dart';
 import 'package:flutter/material.dart';

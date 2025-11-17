@@ -33,17 +33,18 @@ class CageService {
   }
 
   Uri _u(String p, [Map<String, dynamic>? q]) {
-    final base = _base.endsWith('/') ? _base.substring(0, _base.length - 1) : _base;
+    final base =
+    _base.endsWith('/') ? _base.substring(0, _base.length - 1) : _base;
     final path = p.startsWith('/') ? p : '/$p';
     final uri = Uri.parse('$base$path');
     return (q == null || q.isEmpty)
         ? uri
         : uri.replace(
-            queryParameters: {
-              ...uri.queryParameters,
-              ...q.map((k, v) => MapEntry(k, '$v')),
-            },
-          );
+      queryParameters: {
+        ...uri.queryParameters,
+        ...q.map((k, v) => MapEntry(k, '$v')),
+      },
+    );
   }
 
   dynamic _safeDecode(String s) {
@@ -116,7 +117,8 @@ class CageService {
 
       final body = _safeDecode(prof.body);
       final data = (body is Map<String, dynamic>) ? body['data'] : null;
-      final kandangIdDyn = (data is Map<String, dynamic>) ? data['kandang_id'] : null;
+      final kandangIdDyn =
+      (data is Map<String, dynamic>) ? data['kandang_id'] : null;
       if (kandangIdDyn == null) {
         _log('Pegawai tidak memiliki kandang.');
         return const <Cage>[];
@@ -196,7 +198,8 @@ class CageService {
     };
 
     final r = await http
-        .post(_u('kandang/create'), headers: await _headers(), body: jsonEncode(body))
+        .post(_u('kandang/create'),
+        headers: await _headers(), body: jsonEncode(body))
         .timeout(_timeout);
     _log('POST /kandang/create -> ${r.statusCode} ${r.body}');
 
@@ -227,9 +230,6 @@ class CageService {
   }
 
   /// ================ CREATE DAILY REPORT (laporan) ================
-  /// Field kompatibel dengan BE baru:
-  ///   FE-style: kematian_ayam, rata_bobot_ayam, pakan_used, solar_used, sekam_used, obat_used
-  ///   BE-alt  : mati, bobot, pakan, solar, sekam, obat
   Future<void> createLaporan({
     required int kandangId,
     required int kematianAyam,
@@ -259,16 +259,12 @@ class CageService {
     final payload = <String, dynamic>{
       "created_by": createdBy,
       "kandang_id": kandangId,
-
-      // FE-style
       "rata_bobot_ayam": rataBobotAyam ?? 0,
       "kematian_ayam": kematianAyam,
       "pakan_used": pakanUsed,
       "solar_used": solarUsed,
       "sekam_used": sekamUsed,
       "obat_used": obatUsed,
-
-      // BE-alt (compat)
       "bobot": rataBobotAyam ?? 0,
       "mati": kematianAyam,
       "pakan": pakanUsed,
@@ -281,10 +277,10 @@ class CageService {
 
     final r = await http
         .post(
-          _u('laporan/create'), // ubah ke 'laporan' jika BE tidak pakai /create
-          headers: await _headers(),
-          body: jsonEncode(payload),
-        )
+      _u('laporan/create'),
+      headers: await _headers(),
+      body: jsonEncode(payload),
+    )
         .timeout(_timeout);
     _log('POST /laporan/create -> ${r.statusCode} ${r.body}');
 
@@ -293,7 +289,6 @@ class CageService {
       throw Exception(msg ?? 'Gagal membuat laporan (status ${r.statusCode}).');
     }
 
-    // Bila BE kirim success:false
     final parsed = _safeDecode(r.body);
     if (parsed is Map &&
         parsed.containsKey('success') &&
@@ -313,10 +308,10 @@ class CageService {
 
     final r = await http
         .patch(
-          _u('kandang/$id'),
-          headers: await _headers(),
-          body: jsonEncode(body),
-        )
+      _u('kandang/$id'),
+      headers: await _headers(),
+      body: jsonEncode(body),
+    )
         .timeout(_timeout);
     _log('PATCH /kandang/$id -> ${r.statusCode}');
 
@@ -338,6 +333,31 @@ class CageService {
   }
 
   // ================= EXTRA: Laporan =================
+
+  /// Ambil daftar laporan untuk pegawai yang sedang login.
+  /// GET /laporan/me
+  Future<List<Laporan>> getLaporanForMe() async {
+    final r = await http
+        .get(_u('laporan/me'), headers: await _headers())
+        .timeout(_timeout);
+
+    _log('GET /laporan/me -> ${r.statusCode}');
+    if (r.statusCode != 200) {
+      _throwHttp('GET /laporan/me', r);
+    }
+
+    final map = _safeDecode(r.body);
+
+    // Asumsi API Anda mengembalikan {"data": [...] }
+    // Jika API Anda mengembalikan [...] (list) langsung di root,
+    // ubah 'map['data']' menjadi 'map'
+    final list = (map is Map ? map['data'] : map) as List? ?? const [];
+
+    return list
+        .whereType<Map>()
+        .map((e) => Laporan.fromJson(e.cast<String, dynamic>()))
+        .toList();
+  }
 
   /// Ambil daftar laporan untuk sebuah kandang.
   /// GET /laporan?kandang=<id>
@@ -382,15 +402,15 @@ class CageService {
   /// Update laporan (opsional, bila BE sediakan).
   /// PATCH /laporan/<id>
   Future<void> updateLaporanById(
-    int laporanId,
-    Map<String, dynamic> patch,
-  ) async {
+      int laporanId,
+      Map<String, dynamic> patch,
+      ) async {
     final r = await http
         .patch(
-          _u('laporan/$laporanId'),
-          headers: await _headers(),
-          body: jsonEncode(patch),
-        )
+      _u('laporan/$laporanId'),
+      headers: await _headers(),
+      body: jsonEncode(patch),
+    )
         .timeout(_timeout);
 
     _log('PATCH /laporan/$laporanId -> ${r.statusCode}');
@@ -487,4 +507,3 @@ class Laporan {
     return s.endsWith('.0') ? s.substring(0, s.length - 2) : s;
   }
 }
-
