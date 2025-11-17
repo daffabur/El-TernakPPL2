@@ -27,7 +27,7 @@ class StatCardKandang extends StatelessWidget {
     const bg = Color(0xFF2F6F51);
 
     return Container(
-      height: 110,
+      height: 125,
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(16),
@@ -57,30 +57,33 @@ class StatCardKandang extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ====== Header: Title + dropdown ======
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 12, // lebih kecil dari sebelumnya
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    _MiniDropdownChip(
-                      items: kandangNames,
-                      selectedIndex: selectedIndex,
-                      onSelected: onChangeIndex,
-                    ),
-                  ],
+                // ====== Title ======
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+
+                const SizedBox(height: 6),
+
+                // ====== DROPDOWN FULL WIDTH ======
+                SizedBox(
+                  width: double.infinity,
+                  child: _MiniDropdownChip(
+                    items: kandangNames,
+                    selectedIndex: selectedIndex,
+                    onSelected: onChangeIndex,
+                  ),
+                ),
+
                 const Spacer(),
-                // ====== Nilai besar ======
+
+                // ====== Nilai angka besar ======
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
@@ -88,7 +91,7 @@ class StatCardKandang extends StatelessWidget {
                     _fmt(value),
                     style: GoogleFonts.poppins(
                       color: Colors.white,
-                      fontSize: 26, // kecil agar muat semua
+                      fontSize: 26,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -115,7 +118,6 @@ class _MiniDropdownChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double maxWidth = 85; // disempitkan
     final String label = (selectedIndex >= 0 && selectedIndex < items.length)
         ? items[selectedIndex]
         : 'Kandang';
@@ -140,12 +142,16 @@ class _MiniDropdownChip extends StatelessWidget {
               for (int i = 0; i < items.length; i++)
                 PopupMenuItem<int>(
                   value: i,
-                  height: 36,
-                  child: Text(
-                    items[i],
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(fontSize: 12),
+                  height: 40,
+                  child: SizedBox(
+                    width: 220, // <-- LEBAR POPUP DIPERBESAR
+                    child: Text(
+                      items[i],
+                      maxLines: 2, // <-- BOLEH 2 BARIS
+                      softWrap: true,
+                      overflow: TextOverflow.clip, // <-- TANPA ELLIPSIS
+                      style: GoogleFonts.poppins(fontSize: 13),
+                    ),
                   ),
                 ),
             ],
@@ -156,35 +162,35 @@ class _MiniDropdownChip extends StatelessWidget {
         },
         child: Container(
           constraints: const BoxConstraints(
-            minHeight: 24,
-            maxHeight: 24,
-            maxWidth: maxWidth,
+            minHeight: 26,
+            maxHeight: 40, // ruang 2 baris kalau perlu
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.18),
+            color: Colors.white.withOpacity(0.20),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white24, width: 0.8),
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Flexible(
+              Expanded(
                 child: Text(
                   label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                  softWrap: true,
+                  overflow: TextOverflow.clip,
                   style: GoogleFonts.poppins(
                     color: Colors.white,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
-              const SizedBox(width: 2),
+              const SizedBox(width: 4),
               const Icon(
                 Icons.keyboard_arrow_down_rounded,
-                size: 14,
+                size: 16,
                 color: Colors.white,
               ),
             ],

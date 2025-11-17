@@ -24,10 +24,12 @@ class Storage {
   });
 
   // Helper untuk parsing aman dari JSON. Mengembalikan 0 jika null atau tidak valid.
-  static int _toInt(dynamic v) => v is int ? v : int.tryParse(v?.toString() ?? '0') ?? 0;
+  static int _toInt(dynamic v) =>
+      v is int ? v : int.tryParse(v?.toString() ?? '0') ?? 0;
 
   // Helper untuk parsing tanggal. Mengembalikan tanggal saat ini jika null atau tidak valid.
-  static DateTime _toDateTime(dynamic v) => v is String ? (DateTime.tryParse(v) ?? DateTime.now()) : DateTime.now();
+  static DateTime _toDateTime(dynamic v) =>
+      v is String ? (DateTime.tryParse(v) ?? DateTime.now()) : DateTime.now();
 
   // Factory constructor untuk membuat objek Storage dari Map (data JSON)
   factory Storage.fromJson(Map<String, dynamic> json) {
@@ -36,11 +38,11 @@ class Storage {
       pakanStock: _toInt(json['pakan_stock']),
       solarStock: _toInt(json['solar_stock']),
       sekamStock: _toInt(json['sekam_stock']),
-      obatStock: _toInt(json['obat_stock']),
+      obatStock: _toInt(json['ovk_stock']),
       pakanUsed: _toInt(json['pakan_used']),
       solarUsed: _toInt(json['solar_used']),
       sekamUsed: _toInt(json['sekam_used']),
-      obatUsed: _toInt(json['obat_used']),
+      obatUsed: _toInt(json['ovk_used']),
     );
   }
 }

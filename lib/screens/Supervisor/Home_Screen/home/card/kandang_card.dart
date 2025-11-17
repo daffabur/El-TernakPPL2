@@ -57,11 +57,10 @@ class _InfoKandangCardState extends State<InfoKandangCard> {
 
   String _fmtInt(num n) => NumberFormat.decimalPattern('id_ID').format(n);
 
-  // Potong label agar dropdown tidak overflow (tanpa mengubah StatCardKandang)
+  // SEBELUMNYA: memotong nama (substring + …)
+  // SEKARANG: kembalikan apa adanya supaya tampil FULL
   List<String> _shortenNames(List<String> names) {
-    return names
-        .map((s) => s.length > 12 ? '${s.substring(0, 12)}…' : s)
-        .toList();
+    return List<String>.from(names);
   }
 
   @override
@@ -102,6 +101,7 @@ class _InfoKandangCardState extends State<InfoKandangCard> {
           cages.length,
           (i) => cages[i].name.isNotEmpty ? cages[i].name : 'Kandang ${i + 1}',
         );
+        // sekarang namesShort = nama full (tidak dipotong)
         final namesShort = _shortenNames(names);
 
         return FutureBuilder<Cage>(
@@ -125,8 +125,6 @@ class _InfoKandangCardState extends State<InfoKandangCard> {
                       selectedIndex: _selected,
                       onChangeIndex: (i) => _onChangeSelected(i, cages),
                       trailingIcon: Icons.pets,
-                      // format tampilannya tetap dilakukan di dalam widget,
-                      // kita pastikan kirim num yang benar
                     ),
                   ),
                   const SizedBox(width: 12),
