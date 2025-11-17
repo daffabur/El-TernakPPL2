@@ -5,6 +5,7 @@ import 'package:el_ternak_ppl2/services/cage_services.dart';
 import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/models/cage_model.dart';
 import 'package:el_ternak_ppl2/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -35,7 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _sudahInputHariIni = false;
   Laporan? _laporanTerakhir;
   int _hariKe = 1; // Masih dummy/hardcoded karena belum ada logic siklus
-
 
   DateTime get _today => DateTime.now();
 
@@ -98,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // --- REVISI UTAMA DI _loadData() ---
   Future<void> _loadData() async {
     if (!mounted) return;
     setState(() {
@@ -106,25 +107,30 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final cages = await _cageService.getForEmployee();
+      // Panggil kedua API secara paralel (bersamaan)
+      final results = await Future.wait([
+        _cageService.getForEmployee(), // API #1
+        _cageService.getLaporanForMe(),  // API #2 (Baru)
+      ]);
+
       if (!mounted) return;
 
-      if (cages.isNotEmpty) {
-        final cage = cages.first;
-        final riwayat = await _cageService.getLaporanPerKandang(cage.id);
-        if (!mounted) return;
+      final cages = results[0] as List<Cage>;
+      final riwayat = results[1] as List<Laporan>;
 
-        // Urutkan: Terbaru di atas
+      if (cages.isNotEmpty) {
+        // Urutkan riwayat (DESC) agar laporan terbaru ada di [0]
         riwayat.sort(
               (a, b) => _combineToDateTime(b).compareTo(_combineToDateTime(a)),
         );
 
         setState(() {
-          _cage = cage;
-          _riwayatLaporan = riwayat; // Simpan untuk list Aktivitas
+          _cage = cages.first; // Simpan kandang
+          _riwayatLaporan = riwayat; // Simpan riwayat
           _isLoading = false;
         });
 
+        // Cek status input (sekarang dengan data yang sudah di-sort)
         _checkInputStatus(riwayat);
       } else {
         setState(() {
@@ -140,6 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
   }
+  // --- AKHIR REVISI ---
 
   void _navigateToDetail() {
     if (_cage == null) return;
@@ -233,12 +240,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ? _buildErrorView(_error!)
             : _cage == null
             ? _buildErrorView("Kandang tidak ditemukan.")
-            : _buildContent(context, green),
+            : _buildContent(context, green, employeeName),
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, Color green) {
+  Widget _buildContent(
+      BuildContext context, Color green, String employeeName) {
     final cage = _cage!;
 
     // Data Ringkasan Harian
@@ -437,7 +445,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Column(
                   children: [
-                    Icon(Icons.history_edu_rounded, size: 32, color: Colors.grey.shade400),
+                    Icon(Icons.history_edu_rounded,
+                        size: 32, color: Colors.grey.shade400),
                     const SizedBox(height: 8),
                     Text(
                       "Belum ada aktivitas laporan.",
@@ -447,32 +456,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               )
             else
-            // Menampilkan 5 laporan terbaru saja
+            // Tampilkan (misalnya) 5 laporan terbaru saja
               Column(
                 children: _riwayatLaporan.take(5).map((report) {
-                  // Format Tanggal & Jam
-                  DateTime dateTime = DateTime.now();
-                  try {
-                    if (report.tanggalIso != null) {
-                      dateTime = DateTime.parse("${report.tanggalIso} ${report.jam}");
-                    }
-                  } catch (_) {}
-
-                  final formattedDate = DateFormat('dd MMMM yyyy', 'id_ID').format(dateTime);
-                  final formattedTime = report.jam ?? "--:--";
-
-                  // Format Summary
-                  // (Sesuaikan dengan style summary yang Anda inginkan di kartu baru)
-                  final summaryText = report.summary();
-
                   return ActivityReportCard(
-                    userName: report.pencatat ?? "User",
-                    kandangName: cage.name,
-                    summary: summaryText, // e.g. "Bobot 1.3 kg | Mati: 4..."
-                    date: formattedDate,
-                    time: formattedTime,
+                    report: report, // <-- Kirim objek Laporan utuh
                     onTap: () {
-                      // Navigasi ke detail laporan
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -558,6 +547,12 @@ class _HomeScreenState extends State<HomeScreen> {
             bottom: -6,
             child: Opacity(
               opacity: 0.9,
+              child: SvgPicture.asset(
+                asset,
+                width: 52,
+                height: 52,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           Column(

@@ -1,27 +1,41 @@
 import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+
+// --- IMPORT MODEL LAPORAN ---
+// (Sesuaikan path ini jika model Laporan Anda ada di tempat lain)
+import 'package:el_ternak_ppl2/services/cage_services.dart';
 
 class ActivityReportCard extends StatelessWidget {
-  final String userName;
-  final String kandangName;
-  final String summary;
-  final String date;
-  final String time;
+  // --- 1. KONSTRUKTOR BARU ---
+  // Hanya menerima objek Laporan mentah
+  final Laporan report;
   final VoidCallback? onTap;
 
   const ActivityReportCard({
     super.key,
-    required this.userName,
-    required this.kandangName,
-    required this.summary,
-    required this.date,
-    required this.time,
+    required this.report,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    // --- 2. LOGIKA FORMATTING ADA DI SINI ---
+    DateTime dateTime = DateTime.now();
+    try {
+      if (report.tanggalIso != null && report.jam != null) {
+        dateTime = DateTime.parse("${report.tanggalIso} ${report.jam}");
+      }
+    } catch (_) {}
+
+    final formattedDate = DateFormat('dd MMMM yyyy', 'id_ID').format(dateTime);
+    final formattedTime = report.jam ?? "--:--";
+    // Gunakan fungsi .summary() dari model Laporan
+    final summaryText = report.summary();
+    // ---
+
+    // 3. UI BARU (Sesuai desain Anda)
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -43,41 +57,29 @@ class ActivityReportCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(15.0),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar
-
-                // Kolom Info Utama
+                // Kolom Kiri (Tanggal & Detail)
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Text(
-                            userName,
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '| $kandangName',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              color: Colors.black54,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        formattedDate, // <-- Gunakan data yang sudah diformat
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        summary,
+                        summaryText, // <-- Gunakan data yang sudah diformat
                         style: GoogleFonts.poppins(
-                          fontSize: 12,
+                          fontSize: 14,
                           color: Colors.grey.shade600,
                         ),
                         maxLines: 1,
@@ -86,29 +88,18 @@ class ActivityReportCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
-
-                // Kolom Waktu
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      date,
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: Colors.grey.shade500,
-                      ),
+                // Kolom Kanan (Jam)
+                Padding(
+                  padding: const EdgeInsets.only(
+                      left: 16.0, top: 2.0), // Beri sedikit padding atas
+                  child: Text(
+                    formattedTime, // <-- Gunakan data yang sudah diformat
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      time,
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: Colors.grey.shade500,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),

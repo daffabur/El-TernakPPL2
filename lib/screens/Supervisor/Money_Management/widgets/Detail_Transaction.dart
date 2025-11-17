@@ -180,7 +180,7 @@ class _DetailTransactionState extends State<DetailTransaction> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-
+        backgroundColor: AppStyles.highlightColor,
         actions: [
           IconButton(
             onPressed: () {
@@ -189,7 +189,7 @@ class _DetailTransactionState extends State<DetailTransaction> {
             },
             icon: const Icon(
               Icons.edit_outlined,
-              color: Colors.black,
+              color: Colors.white,
               size: 24,
             ),
           ),
