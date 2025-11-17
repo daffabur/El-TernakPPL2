@@ -48,7 +48,7 @@ class TransactionItem extends StatelessWidget {
         final result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => DetailTransaction(transaction: transaction),
+            builder: (context) => DetailTransaction(transactionId: transaction.id),
           ),
         );
 

@@ -37,6 +37,9 @@ class TransactionModel {
         "JSON tidak valid: ID, Tanggal, atau Total tidak boleh null.",
       );
     }
+    print("--- [DEBUG MODEL] Parsing Transaksi ID: ${json['ID']} ---");
+    print("[DEBUG MODEL] Key 'Bukti_transaksi' berisi: ${json['Bukti_transaksi']}");
+    print("[DEBUG MODEL] Key 'Bukti' (yang lama) berisi: ${json['Bukti']}");
 
     return TransactionModel(
       id: json['ID'],
