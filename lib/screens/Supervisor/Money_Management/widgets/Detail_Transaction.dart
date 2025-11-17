@@ -48,6 +48,7 @@ class _DetailTransactionState extends State<DetailTransaction> {
     );
 
     if (shouldDelete == true) {
+      setState(() => _isDeleting = true);
       try {
         await _apiService.deleteTransaction(widget.transaction.id);
 
@@ -74,8 +75,77 @@ class _DetailTransactionState extends State<DetailTransaction> {
           setState(() => _isDeleting = false);
         }
       }
+    }
+  }
+
+  // --- WIDGET BARU: Untuk menampilkan gambar placeholder ---
+  Widget _buildNoImageView({required String message}) {
+    return Container(
+      height: 200,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey.shade300),
+        color: Colors.grey.shade50,
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.image_not_supported_outlined,
+                color: Colors.grey.shade400, size: 40),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: GoogleFonts.poppins(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- WIDGET BARU: Logika untuk menampilkan gambar ---
+  Widget _buildProofImage(String? buktiUrl) {
+    // Cek jika URL valid (bukan null, bukan string kosong, dan bukan string "-")
+    final bool hasImage = buktiUrl != null &&
+        buktiUrl.isNotEmpty &&
+        buktiUrl != "-" &&
+        (buktiUrl.startsWith("http://") || buktiUrl.startsWith("https://"));
+
+    if (hasImage) {
+      // Jika valid, tampilkan Image.network
+      return Container(
+        height: 200,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          color: Colors.grey[200],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(15),
+          child: Image.network(
+            buktiUrl, // <-- Gunakan URL dari API
+            fit: BoxFit.cover,
+            // Tampilkan loading indicator saat gambar diunduh
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return const Center(child: CircularProgressIndicator());
+            },
+            // Tampilkan error jika gambar gagal dimuat
+            errorBuilder: (context, error, stackTrace) {
+              print("Error memuat gambar: $error"); // Tambahkan log
+              return _buildNoImageView(message: "Gagal memuat gambar");
+            },
+          ),
+        ),
+      );
     } else {
-      setState(() => _isDeleting = false);
+      // Jika tidak ada gambar (null, "-", atau string kosong), tampilkan placeholder
+      return _buildNoImageView(
+          message: buktiUrl == "-"
+              ? "Bukti transaksi tidak diunggah"
+              : "Tidak ada bukti transaksi");
     }
   }
 
@@ -166,7 +236,8 @@ class _DetailTransactionState extends State<DetailTransaction> {
               _buildDetailRow("Kategori", widget.transaction.kategori),
               _buildDetailRow("Tanggal Transaksi", formattedDate),
               if (widget.transaction.catatan != null &&
-                  widget.transaction.catatan!.isNotEmpty)
+                  widget.transaction.catatan!.isNotEmpty &&
+                  widget.transaction.catatan! != "-") // <-- Tambah cek "-"
                 _buildDetailRow("Catatan", widget.transaction.catatan!),
 
               const Divider(),
@@ -181,22 +252,12 @@ class _DetailTransactionState extends State<DetailTransaction> {
               ),
               const SizedBox(height: 10),
               Center(
-                child: Container(
-                  height: 200,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(15),
-                    image: const DecorationImage(
-                      // TODO: Ganti dengan URL gambar bukti dari API jika sudah ada
-                      image: AssetImage(
-                        'assets/images/Pc_TransactionReceipt.png',
-                      ),
-                    ),
-                  ),
-                ),
+                // --- PERUBAHAN DI SINI ---
+                // Ganti Container statis dengan widget dinamis
+                child: _buildProofImage(widget.transaction.bukti),
+                // --- AKHIR PERUBAHAN ---
               ),
               const SizedBox(height: 40),
-
 
               SizedBox(
                 width: double.infinity,
@@ -208,26 +269,24 @@ class _DetailTransactionState extends State<DetailTransaction> {
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  onPressed: _isDeleting
-                      ? null
-                      : _confirmDelete,
+                  onPressed: _isDeleting ? null : _confirmDelete,
                   child: _isDeleting
                       ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 3,
-                          ),
-                        )
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 3,
+                    ),
+                  )
                       : Text(
-                          "Hapus Transaksi",
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 16,
-                          ),
-                        ),
+                    "Hapus Transaksi",
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 16,
+                    ),
+                  ),
                 ),
               ),
             ],
