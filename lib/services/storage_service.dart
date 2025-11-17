@@ -11,6 +11,37 @@ import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/models/stor
 import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/models/storage_report.dart';
 import 'package:el_ternak_ppl2/services/auth_service.dart';
 
+/// Model kecil untuk alert pakan dari endpoint /storage/checkPakan
+class PakanAlert {
+  final bool alert;
+  final String item;
+  final int sisaPakan;
+  final int sisaHariKeAkhirBulan;
+
+  const PakanAlert({
+    required this.alert,
+    required this.item,
+    required this.sisaPakan,
+    required this.sisaHariKeAkhirBulan,
+  });
+
+  factory PakanAlert.fromJson(Map<String, dynamic> json) {
+    int _toInt(dynamic v) {
+      if (v is int) return v;
+      if (v is double) return v.toInt();
+      if (v is String) return int.tryParse(v) ?? 0;
+      return 0;
+    }
+
+    return PakanAlert(
+      alert: json['alert'] == true,
+      item: json['item']?.toString() ?? '-',
+      sisaPakan: _toInt(json['sisa_pakan']),
+      sisaHariKeAkhirBulan: _toInt(json['sisa_hari_ke_akhir_bulan']),
+    );
+  }
+}
+
 class StorageService {
   static const String _baseUrl =
       'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api';
@@ -58,6 +89,32 @@ class StorageService {
         ? body['message'].toString()
         : 'Gagal (${resp.statusCode})';
     throw HttpException(msg);
+  }
+
+  /// === ALERT PAKAN (dipakai untuk banner di dashboard) ===
+  /// Endpoint: GET /storage/checkPakan
+  /// - Jika `alert` = true -> return PakanAlert
+  /// - Jika `alert` = false -> return null (tidak perlu tampil banner)
+  Future<PakanAlert?> getPakanAlert() async {
+    try {
+      final resp = await _client
+          .get(_u('/storage/checkPakan'), headers: await _headers())
+          .timeout(_timeout);
+
+      return _handleResponse<PakanAlert?>(
+        resp: resp,
+        onOk: (json) {
+          if (json is! Map<String, dynamic>) return null;
+          final map = json as Map<String, dynamic>;
+          if (map['alert'] != true) return null;
+          return PakanAlert.fromJson(map);
+        },
+      );
+    } on SocketException {
+      throw const SocketException('Tidak ada koneksi internet');
+    } on TimeoutException {
+      throw Exception('Timeout menghubungi server /storage/checkPakan');
+    }
   }
 
   /// === DIPAKAI UNTUK CARD "INFO LUMBUNG" ===

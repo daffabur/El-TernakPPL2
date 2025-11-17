@@ -36,21 +36,30 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
   final AuthService _auth = AuthService();
   final CageService _cageService = CageService();
 
-  // Samakan dengan base URL server kamu
-  static const String _base = 'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api';
+  // Dipakai hanya untuk GET detail kandang (ambil PIC)
+  static const String _base =
+      'http://ec2-54-169-33-190.ap-southeast-1.compute.amazonaws.com:80/api';
 
   // ===== Controllers & state =====
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  final List<String> _roleItems = ['pegawai', 'petinggi'];
+  final List<String> _roleItems = const ['pegawai', 'petinggi'];
+
   final Map<String, bool> _statusItems = const {
     'Active': true,
     'Inactive': false,
   };
 
+  // dropdown PJ (Penanggung Jawab)
+  final Map<String, bool> _pjItems = const {
+    'Bukan PJ': false,
+    'Penanggung jawab (PJ)': true,
+  };
+
   String? _selectedRole;
   bool? _selectedStatusValue;
+  bool? _selectedPjValue; // <--- status PJ
 
   // Kandang dropdown
   List<Cage> _allCages = <Cage>[];
@@ -59,7 +68,6 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
   int? _selectedKandangId; // nilai yang dikirim ke BE (kandangID)
 
   bool _isLoading = false;
-
 
   @override
   void initState() {
@@ -71,11 +79,16 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
       _selectedRole = widget.user!.role;
       _selectedStatusValue = widget.user!.isActive;
       _selectedKandangId = widget.user!.kandangId; // bisa null
+
+      if (widget.user!.role == 'pegawai') {
+        _selectedPjValue = widget.user!.isPj; // <-- sesuaikan dgn field di User
+      }
     }
 
-    // Default role saat add
+    // Default saat add
     _selectedRole ??= 'pegawai';
     _selectedStatusValue ??= true;
+    _selectedPjValue ??= false; // default bukan PJ
 
     // Muat list kandang & coba preselect
     _loadCagesAndPreselect();
@@ -130,8 +143,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
     });
 
     try {
-      final list = await _cageService
-          .getAll(); // endpoint admin sudah OK untuk list
+      final list = await _cageService.getAll(); // endpoint admin OK untuk list
       list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
       int? preselectId = _selectedKandangId; // kalau user.kandangId sudah ada
@@ -191,6 +203,25 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
   }
 
   // =========================================================
+  // Validasi sederhana
+  // =========================================================
+  String? _validate() {
+    final username = _usernameController.text.trim();
+    if (username.isEmpty) return 'Username tidak boleh kosong.';
+    if (widget.mode == BottomSheetMode.add) {
+      if (_passwordController.text.isEmpty) {
+        return 'Password tidak boleh kosong untuk pembuatan user baru.';
+      }
+    }
+    if ((_selectedRole ?? 'pegawai') == 'pegawai') {
+      if (_selectedKandangId == null) {
+        return 'Pilih kandang untuk role pegawai.';
+      }
+    }
+    return null;
+  }
+
+  // =========================================================
   // Actions
   // =========================================================
   Future<void> _handleDelete() async {
@@ -235,6 +266,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
           backgroundColor: Colors.green,
         ),
       );
+
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
@@ -251,6 +283,14 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
   }
 
   Future<void> _handleSave() async {
+    final error = _validate();
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -264,6 +304,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
         "role": _selectedRole,
         "isActive": _selectedStatusValue,
         if (kandangId != null) "kandangID": kandangId,
+        "is_pj": _selectedPjValue ?? false, // <-- field dikirim ke BE
       };
 
       if (widget.mode == BottomSheetMode.add) {
@@ -283,9 +324,19 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
           throw Exception("Username asli tidak ditemukan untuk pembaruan.");
         }
         await _apiService.updateUser(originalUsername, userData);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('User berhasil diperbarui!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
 
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString().replaceAll("Exception: ", "");
@@ -456,15 +507,18 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
                     onChanged: (val) {
                       setState(() {
                         _selectedRole = val;
-                        // kalau pindah ke petinggi, kosongkan pilihan kandang
-                        if (val != 'pegawai') _selectedKandangId = null;
+                        if (val != 'pegawai') {
+                          _selectedKandangId = null;
+                          _selectedPjValue = false;
+                        }
                       });
                     },
                   ),
                   const SizedBox(height: 20),
 
-                  // Kandang (hanya untuk pegawai)
+                  // Kandang + Status PJ (hanya untuk pegawai)
                   if (_selectedRole == 'pegawai') ...[
+                    // Kandang
                     const Text(
                       "Kandang",
                       style: TextStyle(
@@ -528,10 +582,59 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
                             setState(() => _selectedKandangId = val),
                       ),
                     ],
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
+
+                    // STATUS PJ
+                    const Text(
+                      "Status PJ",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<bool>(
+                      value: _selectedPjValue,
+                      hint: const Text("Pilih status PJ"),
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 0,
+                          horizontal: 20,
+                        ).copyWith(right: 10),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                          borderSide: BorderSide(
+                            width: 1.5,
+                            color: AppStyles.primaryColor.withOpacity(0.7),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                          borderSide: BorderSide(
+                            width: 2.0,
+                            color: AppStyles.primaryColor,
+                          ),
+                        ),
+                      ),
+                      items: _pjItems.entries
+                          .map(
+                            (e) => DropdownMenuItem<bool>(
+                              value: e.value,
+                              child: Text(
+                                e.key,
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) =>
+                          setState(() => _selectedPjValue = v ?? false),
+                    ),
+                    const SizedBox(height: 20),
                   ],
 
-                  // Status
+                  // Status aktif / tidak
                   const Text(
                     "Status",
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
