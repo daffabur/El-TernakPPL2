@@ -60,24 +60,18 @@ class ApiService {
 
   Future<Map<String, String>> login(String username, String password) async {
     // --- LANGKAH 1: PANGGIL /auth/login ---
-    final loginResponse = await http.post(
+    final response = await http.post(
       Uri.parse('${_baseUrl}auth/login'),
       headers: {'Content-Type': 'application/json; charset=UTF-8'},
       body: jsonEncode({'username': username, 'password': password}),
     );
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseBody = _safeDecode(response.body);
-      final String? token = responseBody['data']?['token'];
-      if (token != null && token.isNotEmpty) {
-        return token;
-      } else {
-        throw Exception('Respons login tidak valid: token tidak ditemukan.');
-      }
-    } else {
+    // Kalau status bukan 200, handle error dulu
+    if (response.statusCode != 200) {
       String serverMessage = 'Terjadi kesalahan. Coba lagi nanti';
       try {
-        final Map<String, dynamic> responseBody = _safeDecode(response.body);
+        final Map<String, dynamic> responseBody =
+            _safeDecode<Map<String, dynamic>>(response.body);
         serverMessage =
             responseBody['message'] ?? 'Pesan error tidak ditemukan di server.';
       } catch (_) {
@@ -85,9 +79,10 @@ class ApiService {
           "Gagal membaca body JSON dari respons error. Status: ${response.statusCode}",
         );
       }
+
       switch (response.statusCode) {
-        case 401:
         case 400:
+        case 401:
           throw Exception(
             serverMessage.contains('Pesan error tidak ditemukan')
                 ? 'Username atau password salah.'
@@ -101,28 +96,30 @@ class ApiService {
           throw Exception(
             'Server sedang mengalami masalah. Coba lagi beberapa saat.',
           );
-
         default:
           throw Exception('Gagal login dengan status: ${response.statusCode}');
       }
     }
 
-    // Ekstrak token dan role dari respons login
-    final Map<String, dynamic> loginBody = _safeDecode(loginResponse.body);
+    // --- STATUS 200: proses body login ---
+    final Map<String, dynamic> loginBody = _safeDecode<Map<String, dynamic>>(
+      response.body,
+    );
     final String? token = loginBody['data']?['token'];
     final String? role = loginBody['data']?['role'];
 
     if (token == null || token.isEmpty || role == null || role.isEmpty) {
-      throw Exception('Respons login tidak valid: token atau role tidak ditemukan.');
+      throw Exception(
+        'Respons login tidak valid: token atau role tidak ditemukan.',
+      );
     }
 
     // --- LANGKAH 2: PANGGIL /account/me ---
-    // Gunakan token yang BARU saja didapat untuk memanggil /account/me
     final meResponse = await http.get(
       Uri.parse('${_baseUrl}account/me'),
       headers: {
         'Content-Type': 'application/json; charset=UTF-8',
-        'Authorization': token, // Kirim token baru
+        'Authorization': token,
       },
     );
 
@@ -130,7 +127,9 @@ class ApiService {
       throw Exception('Login berhasil, tapi gagal memuat profil user.');
     }
 
-    final Map<String, dynamic> meBody = _safeDecode(meResponse.body);
+    final Map<String, dynamic> meBody = _safeDecode<Map<String, dynamic>>(
+      meResponse.body,
+    );
     final String? usernameFromMe = meBody['data']?['username'];
 
     if (usernameFromMe == null || usernameFromMe.isEmpty) {
@@ -138,11 +137,7 @@ class ApiService {
     }
 
     // --- LANGKAH 3: Kembalikan semua data ---
-    return {
-      'token': token,
-      'role': role,
-      'username': usernameFromMe,
-    };
+    return {'token': token, 'role': role, 'username': usernameFromMe};
   }
 
   // ================== Manage Account ==================
@@ -185,7 +180,8 @@ class ApiService {
       print("📦 [ApiService] RESPONSE Petinggi: ${response.statusCode}");
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = _safeDecode(response.body);
+        final Map<String, dynamic> jsonResponse =
+            _safeDecode<Map<String, dynamic>>(response.body);
         final List<dynamic> dataList = jsonResponse['data'] ?? [];
         return dataList
             .whereType<Map<String, dynamic>>()
@@ -219,7 +215,8 @@ class ApiService {
       print("📦 [ApiService] RESPONSE Pegawai: ${response.statusCode}");
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = _safeDecode(response.body);
+        final Map<String, dynamic> jsonResponse =
+            _safeDecode<Map<String, dynamic>>(response.body);
         final List<dynamic> dataList = jsonResponse['data'] ?? [];
         return dataList
             .whereType<Map<String, dynamic>>()
@@ -289,7 +286,8 @@ class ApiService {
 
       if (response.statusCode != 201 && response.statusCode != 200) {
         try {
-          final Map<String, dynamic> responseBody = _safeDecode(response.body);
+          final Map<String, dynamic> responseBody =
+              _safeDecode<Map<String, dynamic>>(response.body);
           final errorMessage = responseBody['message'] ?? 'Gagal membuat user.';
           throw Exception(errorMessage);
         } catch (_) {
@@ -327,7 +325,8 @@ class ApiService {
 
       if (response.statusCode != 200) {
         try {
-          final Map<String, dynamic> responseBody = _safeDecode(response.body);
+          final Map<String, dynamic> responseBody =
+              _safeDecode<Map<String, dynamic>>(response.body);
           final errorMessage =
               responseBody['message'] ?? 'Gagal memperbarui user.';
           throw Exception(errorMessage);
@@ -356,7 +355,8 @@ class ApiService {
 
       if (response.statusCode != 200) {
         try {
-          final Map<String, dynamic> responseBody = _safeDecode(response.body);
+          final Map<String, dynamic> responseBody =
+              _safeDecode<Map<String, dynamic>>(response.body);
           final errorMessage =
               responseBody['message'] ?? 'Gagal menghapus user.';
           throw Exception(errorMessage);
@@ -380,7 +380,8 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = _safeDecode(response.body);
+        final Map<String, dynamic> jsonResponse =
+            _safeDecode<Map<String, dynamic>>(response.body);
         final List<dynamic> dataList = jsonResponse['data'] ?? [];
         return dataList
             .whereType<Map<String, dynamic>>()
@@ -435,7 +436,8 @@ class ApiService {
       print("URL Filter yang dipanggil: $uri");
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = _safeDecode(response.body);
+        final Map<String, dynamic> jsonResponse =
+            _safeDecode<Map<String, dynamic>>(response.body);
         final List<dynamic> dataList = jsonResponse['data'] ?? [];
         return dataList
             .whereType<Map<String, dynamic>>()
@@ -469,7 +471,8 @@ class ApiService {
         headers: headers,
       );
       if (response.statusCode == 200) {
-        final Map<String, dynamic> responseBody = _safeDecode(response.body);
+        final Map<String, dynamic> responseBody =
+            _safeDecode<Map<String, dynamic>>(response.body);
         if (responseBody['success'] == true && responseBody['data'] != null) {
           double totalAmount = 0.0;
           for (final t in (responseBody['data'] as List)) {
@@ -555,7 +558,8 @@ class ApiService {
       if (response.statusCode != 201 && response.statusCode != 200) {
         String serverMessage = 'Gagal membuat transaksi.';
         try {
-          final Map<String, dynamic> responseBody = _safeDecode(response.body);
+          final Map<String, dynamic> responseBody =
+              _safeDecode<Map<String, dynamic>>(response.body);
           serverMessage =
               responseBody['message'] ??
               'Tidak ada pesan error spesifik dari server.';
@@ -586,7 +590,8 @@ class ApiService {
       print("Response Body Summary: ${response.body}");
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> responseBody = _safeDecode(response.body);
+        final Map<String, dynamic> responseBody =
+            _safeDecode<Map<String, dynamic>>(response.body);
 
         if (responseBody.containsKey('data') &&
             responseBody['data'] is Map<String, dynamic>) {
@@ -642,7 +647,8 @@ class ApiService {
       print("Status Code Detail: ${response.statusCode}");
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = _safeDecode(response.body);
+        final Map<String, dynamic> jsonResponse =
+            _safeDecode<Map<String, dynamic>>(response.body);
         return TransactionModel.fromJson(
           (jsonResponse['data'] as Map<String, dynamic>),
         );
@@ -724,4 +730,3 @@ class ApiService {
     }
   }
 }
-

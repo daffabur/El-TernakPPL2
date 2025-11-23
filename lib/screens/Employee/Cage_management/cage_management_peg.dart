@@ -1,3 +1,5 @@
+// lib/screens/Employee/Cage_Management/cage_management_peg.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -26,7 +28,6 @@ class _CageManagementPegState extends State<CageManagementPeg> {
   }
 
   Future<List<Cage>> _loadCages() async {
-    // Pastikan method servicemu mengembalikan Future<List<Cage>>
     return _service.getForEmployee();
   }
 
@@ -34,9 +35,7 @@ class _CageManagementPegState extends State<CageManagementPeg> {
     setState(() => _future = _loadCages());
     try {
       await _future;
-    } catch (_) {
-      // biarkan FutureBuilder yang menampilkan error
-    }
+    } catch (_) {}
     if (!mounted) return;
   }
 
@@ -49,7 +48,6 @@ class _CageManagementPegState extends State<CageManagementPeg> {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         foregroundColor: Colors.black87,
-        centerTitle: false,
         title: Text(
           'Informasi Kandang',
           style: GoogleFonts.poppins(
@@ -63,39 +61,19 @@ class _CageManagementPegState extends State<CageManagementPeg> {
         child: FutureBuilder<List<Cage>>(
           future: _future,
           builder: (context, snap) {
-            // ===== Loading =====
             if (snap.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            // ===== Error =====
             if (snap.hasError) {
               final msg = (snap.error ?? '').toString();
-              final lower = msg.toLowerCase();
-              final is403 =
-                  lower.contains('403') || lower.contains('forbidden');
-
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                ).copyWith(top: 48),
+                padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
                 children: [
-                  Icon(
-                    is403 ? Icons.lock_outline : Icons.error_outline,
-                    size: 48,
-                    color: Colors.grey[500],
-                  ),
+                  const Icon(Icons.error_outline, size: 48),
                   const SizedBox(height: 12),
-                  Center(
-                    child: Text(
-                      is403
-                          ? 'Akses kandang ditolak untuk akun ini.\nHubungi atasan untuk mendapatkan akses.'
-                          : 'Gagal memuat kandang:\n$msg',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(color: Colors.black54),
-                    ),
-                  ),
+                  Center(child: Text('Gagal memuat kandang:\n$msg')),
                   const SizedBox(height: 12),
                   Center(
                     child: TextButton.icon(
@@ -108,25 +86,17 @@ class _CageManagementPegState extends State<CageManagementPeg> {
               );
             }
 
-            final items = snap.data ?? const <Cage>[];
+            final items = snap.data ?? [];
 
-            // ===== Empty =====
             if (items.isEmpty) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                ).copyWith(top: 48),
+                padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
                 children: [
-                  Icon(Icons.info_outline, size: 44, color: Colors.grey[500]),
-                  const SizedBox(height: 8),
-                  Center(
-                    child: Text(
-                      'Belum ada kandang untuk akun ini.',
-                      style: GoogleFonts.poppins(color: Colors.black54),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
+                  const Icon(Icons.info_outline, size: 48),
+                  const SizedBox(height: 12),
+                  Center(child: Text('Belum ada kandang untuk akun ini.')),
+                  const SizedBox(height: 12),
                   Center(
                     child: TextButton.icon(
                       onPressed: _reload,
@@ -138,7 +108,6 @@ class _CageManagementPegState extends State<CageManagementPeg> {
               );
             }
 
-            // ===== List kandang =====
             return ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -148,20 +117,18 @@ class _CageManagementPegState extends State<CageManagementPeg> {
                 final cage = items[i];
                 return CustomCardCagePeg(
                   cage: cage,
-                  onTap: () {
-                    // Dorong ke halaman detail (push biasa, bukan replacement)
-                    Navigator.of(context)
-                        .push(
-                          MaterialPageRoute(
-                            builder: (_) => CustomDetailCagePeg(cage: cage),
-                            settings: RouteSettings(
-                              name: 'emp/cage/detail/${cage.id }',
-                            ),
-                          ),
-                        )
-                        .then((_) {
-                          if (mounted) _reload(); // refresh setelah kembali
-                        });
+                  onTap: () async {
+                    // ============= AUTO REFRESH FIX =============
+                    final updated = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CustomDetailCagePeg(cage: cage),
+                      ),
+                    );
+
+                    if (updated == true) {
+                      await _reload();
+                    }
                   },
                 );
               },

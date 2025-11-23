@@ -89,7 +89,7 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
     try {
       final items = await _service.getLaporanPerKandang(kandangId);
       items.sort(
-            (a, b) => _combineToDateTime(b).compareTo(_combineToDateTime(a)),
+        (a, b) => _combineToDateTime(b).compareTo(_combineToDateTime(a)),
       );
 
       if (!mounted) return;
@@ -151,7 +151,7 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
       // Auto-reload data
       await Future.wait([
         _loadRiwayat(id),
-            () async {
+        () async {
           try {
             final fresh = await _service.getById(id);
             if (!mounted) return;
@@ -202,10 +202,7 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
             child: Text(
               'Buat Laporan',
@@ -245,7 +242,7 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
                       key: _inputCardKey,
                       onSubmit: _submitHarian, // <-- Tipe payload sudah diubah
                       submitterName:
-                      cage.pic?.name ?? cage.pic?.username ?? '-',
+                          cage.pic?.name ?? cage.pic?.username ?? '-',
                       onHidden: () {
                         setState(() => _isInputMode = false);
                       },
@@ -301,7 +298,7 @@ class _CustomDetailCagePegState extends State<CustomDetailCagePeg> {
                         _loadRiwayat(id);
                       }
                     },
-                  )
+                  ),
                 ],
               ),
             ),

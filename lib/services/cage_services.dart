@@ -23,8 +23,9 @@ class CageService {
     if (token == null || token.isEmpty) {
       throw Exception('Token tidak ditemukan. Silakan login ulang.');
     }
-    // Authorization = token mentah (tanpa "Bearer ")
-    final authValue = token.startsWith('Bearer ') ? token : token;
+
+    // Di AuthService kamu sudah simpan "Bearer xxx", jadi jangan didobel
+    final authValue = token;
 
     return {
       'Content-Type': 'application/json; charset=UTF-8',
@@ -33,18 +34,19 @@ class CageService {
   }
 
   Uri _u(String p, [Map<String, dynamic>? q]) {
-    final base =
-    _base.endsWith('/') ? _base.substring(0, _base.length - 1) : _base;
+    final base = _base.endsWith('/')
+        ? _base.substring(0, _base.length - 1)
+        : _base;
     final path = p.startsWith('/') ? p : '/$p';
     final uri = Uri.parse('$base$path');
     return (q == null || q.isEmpty)
         ? uri
         : uri.replace(
-      queryParameters: {
-        ...uri.queryParameters,
-        ...q.map((k, v) => MapEntry(k, '$v')),
-      },
-    );
+            queryParameters: {
+              ...uri.queryParameters,
+              ...q.map((k, v) => MapEntry(k, '$v')),
+            },
+          );
   }
 
   dynamic _safeDecode(String s) {
@@ -68,6 +70,12 @@ class CageService {
     if (v == null) return null;
     if (v is int) return v;
     return int.tryParse(v.toString());
+  }
+
+  num? _toNum(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v;
+    return num.tryParse(v.toString());
   }
 
   List<Cage> _parseList(dynamic body) {
@@ -117,8 +125,9 @@ class CageService {
 
       final body = _safeDecode(prof.body);
       final data = (body is Map<String, dynamic>) ? body['data'] : null;
-      final kandangIdDyn =
-      (data is Map<String, dynamic>) ? data['kandang_id'] : null;
+      final kandangIdDyn = (data is Map<String, dynamic>)
+          ? data['kandang_id']
+          : null;
       if (kandangIdDyn == null) {
         _log('Pegawai tidak memiliki kandang.');
         return const <Cage>[];
@@ -163,43 +172,41 @@ class CageService {
 
   // ================= CREATE =================
 
+  /// Body dibuat supaya mirip dengan contoh Postman:
+  /// {
+  ///   "nama": "Kandang Depok",
+  ///   "kapasitas": 5000,
+  ///   "populasi": 4500,
+  ///   "kematian": 500,
+  ///   "konsumsi_pakan": 20,
+  ///   "solar": 15,
+  ///   "sekam": 15,
+  ///   "obat": 5,
+  ///   "status": "inactive"
+  /// }
   Future<Cage> create(Map<String, dynamic> ui) async {
-    // Ambil id penanggung jawab dari berbagai kemungkinan input
-    int? idPj;
-    final dynamic idPenanggungJawabValue = ui['idPenanggungJawab'];
-    if (idPenanggungJawabValue is List && idPenanggungJawabValue.isNotEmpty) {
-      idPj = _toInt(idPenanggungJawabValue.first);
-    } else if (idPenanggungJawabValue is int) {
-      idPj = idPenanggungJawabValue;
-    } else {
-      idPj = _toInt(idPenanggungJawabValue);
-    }
-    idPj ??= _toInt(ui['id_pj_kandang']);
-
-    if (idPj == null || idPj == 0) {
-      final dynamic picData = ui['pic'];
-      if (picData != null) {
-        try {
-          idPj = _toInt((picData as dynamic).id);
-        } catch (_) {
-          if (picData is Map) {
-            idPj = _toInt(picData['id']);
-          }
-        }
-      }
-    }
-
-    // Body untuk API
     final body = <String, dynamic>{
       'nama': (ui['nama'] ?? ui['name'] ?? ui['Nama'])?.toString(),
-      'kapasitas': ui['kapasitas'] ?? ui['capacity'] ?? 0,
-      if (idPj != null && idPj != 0) 'idPenanggungJawab': idPj,
-      if (ui['status'] != null) 'status': ui['status'].toString().toLowerCase(),
+      'kapasitas': _toInt(ui['kapasitas'] ?? ui['capacity']) ?? 0,
+      'populasi': _toInt(ui['populasi'] ?? ui['population']) ?? 0,
+      'kematian': _toInt(ui['kematian'] ?? ui['deaths']) ?? 0,
+      'konsumsi_pakan':
+          _toNum(ui['konsumsi_pakan'] ?? ui['feed'] ?? ui['konsumsiPakan']) ??
+          0,
+      'solar': _toNum(ui['solar']) ?? 0,
+      'sekam': _toNum(ui['sekam']) ?? 0,
+      'obat': _toNum(ui['obat']) ?? 0,
+      'status': (ui['status'] ?? 'active').toString().toLowerCase(),
     };
 
+    _log('POST /kandang/create body: ${jsonEncode(body)}');
+
     final r = await http
-        .post(_u('kandang/create'),
-        headers: await _headers(), body: jsonEncode(body))
+        .post(
+          _u('kandang/create'),
+          headers: await _headers(),
+          body: jsonEncode(body),
+        )
         .timeout(_timeout);
     _log('POST /kandang/create -> ${r.statusCode} ${r.body}');
 
@@ -213,19 +220,19 @@ class CageService {
 
     // Fallback jika respons tidak mengandung data, buat objek Cage dari input
     return Cage(
-      id: DateTime.now().millisecondsSinceEpoch, // ID sementara
+      id: DateTime.now().millisecondsSinceEpoch,
       name: (body['nama'] as String?) ?? '',
       capacity: (body['kapasitas'] as int?) ?? 0,
-      population: 0,
-      deaths: 0,
+      population: (body['populasi'] as int?) ?? 0,
+      deaths: (body['kematian'] as int?) ?? 0,
       pic: null,
       team: const [],
-      status: 'active',
+      status: (body['status'] as String?) ?? 'active',
       notes: null,
-      pakan: 0,
-      solar: 0,
-      sekam: 0,
-      obat: 0,
+      pakan: (body['konsumsi_pakan'] as num?) ?? 0,
+      solar: (body['solar'] as num?) ?? 0,
+      sekam: (body['sekam'] as num?) ?? 0,
+      obat: (body['obat'] as num?) ?? 0,
     );
   }
 
@@ -277,10 +284,10 @@ class CageService {
 
     final r = await http
         .post(
-      _u('laporan/create'),
-      headers: await _headers(),
-      body: jsonEncode(payload),
-    )
+          _u('laporan/create'),
+          headers: await _headers(),
+          body: jsonEncode(payload),
+        )
         .timeout(_timeout);
     _log('POST /laporan/create -> ${r.statusCode} ${r.body}');
 
@@ -301,19 +308,48 @@ class CageService {
   // ================= UPDATE =================
 
   Future<void> updateById(int id, Map<String, dynamic> ui) async {
-    final body = <String, dynamic>{
-      if (ui['nama'] != null) 'nama': ui['nama'].toString(),
-      if (ui['kapasitas'] != null) 'kapasitas': ui['kapasitas'],
-    };
+    // Map dari berbagai kemungkinan nama field UI ke field BE
+    final body = <String, dynamic>{};
+
+    final nama = ui['nama'] ?? ui['name'] ?? ui['Nama'];
+    if (nama != null) body['nama'] = nama.toString();
+
+    final kapasitas = _toInt(ui['kapasitas'] ?? ui['capacity']);
+    if (kapasitas != null) body['kapasitas'] = kapasitas;
+
+    final pop = _toInt(ui['populasi'] ?? ui['population']);
+    if (pop != null) body['populasi'] = pop;
+
+    final kematian = _toInt(ui['kematian'] ?? ui['deaths']);
+    if (kematian != null) body['kematian'] = kematian;
+
+    final konsumsi = _toNum(
+      ui['konsumsi_pakan'] ?? ui['feed'] ?? ui['konsumsiPakan'] ?? ui['pakan'],
+    );
+    if (konsumsi != null) body['konsumsi_pakan'] = konsumsi;
+
+    final solar = _toNum(ui['solar']);
+    if (solar != null) body['solar'] = solar;
+
+    final sekam = _toNum(ui['sekam']);
+    if (sekam != null) body['sekam'] = sekam;
+
+    final obat = _toNum(ui['obat']);
+    if (obat != null) body['obat'] = obat;
+
+    final status = ui['status'];
+    if (status != null) body['status'] = status.toString().toLowerCase();
+
+    _log('PATCH /kandang/$id body: ${jsonEncode(body)}');
 
     final r = await http
         .patch(
-      _u('kandang/$id'),
-      headers: await _headers(),
-      body: jsonEncode(body),
-    )
+          _u('kandang/$id'),
+          headers: await _headers(),
+          body: jsonEncode(body),
+        )
         .timeout(_timeout);
-    _log('PATCH /kandang/$id -> ${r.statusCode}');
+    _log('PATCH /kandang/$id -> ${r.statusCode} ${r.body}');
 
     if (r.statusCode != 200) {
       _throwHttp('PATCH /kandang/$id', r);
@@ -348,9 +384,6 @@ class CageService {
 
     final map = _safeDecode(r.body);
 
-    // Asumsi API Anda mengembalikan {"data": [...] }
-    // Jika API Anda mengembalikan [...] (list) langsung di root,
-    // ubah 'map['data']' menjadi 'map'
     final list = (map is Map ? map['data'] : map) as List? ?? const [];
 
     return list
@@ -402,15 +435,15 @@ class CageService {
   /// Update laporan (opsional, bila BE sediakan).
   /// PATCH /laporan/<id>
   Future<void> updateLaporanById(
-      int laporanId,
-      Map<String, dynamic> patch,
-      ) async {
+    int laporanId,
+    Map<String, dynamic> patch,
+  ) async {
     final r = await http
         .patch(
-      _u('laporan/$laporanId'),
-      headers: await _headers(),
-      body: jsonEncode(patch),
-    )
+          _u('laporan/$laporanId'),
+          headers: await _headers(),
+          body: jsonEncode(patch),
+        )
         .timeout(_timeout);
 
     _log('PATCH /laporan/$laporanId -> ${r.statusCode}');
@@ -492,10 +525,11 @@ class Laporan {
     final b = (bobot != null) ? 'Bobot ${_trim(bobot)} kg' : null;
     final m = (mati != null) ? 'Mati: ${mati!}' : null;
     final p = (pakan != null) ? 'Pakan: ${_trim(pakan)} kg' : null;
-    final parts = [b, m, p]
-        .where((e) => e != null && e!.isNotEmpty)
-        .cast<String>()
-        .toList();
+    final parts = [
+      b,
+      m,
+      p,
+    ].where((e) => e != null && e!.isNotEmpty).cast<String>().toList();
     return parts.join(' | ');
   }
 

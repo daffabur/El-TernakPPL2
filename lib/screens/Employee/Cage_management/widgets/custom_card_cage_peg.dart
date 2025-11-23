@@ -13,6 +13,9 @@ class CustomCardCagePeg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Populasi = kapasitas - kematian (auto ikut berubah kalau object Cage sudah update)
+    final int shownPopulation = (cage.capacity - cage.deaths).clamp(0, 9999999);
+
     return Semantics(
       button: true,
       label: 'Buka ${cage.name}',
@@ -74,7 +77,7 @@ class CustomCardCagePeg extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${cage.population} Populasi',
+                            '$shownPopulation Populasi',
                             style: GoogleFonts.poppins(
                               color: Colors.black54,
                               fontSize: 12,

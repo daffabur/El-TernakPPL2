@@ -206,7 +206,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
       final items = await _api.getPegawaiOnly();
 
       // Filter aktif (jika field ada; kalau tidak ada, default true)
-      final filtered = items.where((u) => (u.isActive )).toList();
+      final filtered = items.where((u) => (u.isActive)).toList();
 
       if (!mounted) return;
       setState(() {
@@ -237,37 +237,32 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
   void _handleSave() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    // BE minta array ID -> [idPegawai]
-    final List<int> idPenanggungJawab =
-        (_selectedPersonId != null && _selectedPersonId! > 0)
-        ? <int>[_selectedPersonId!]
-        : <int>[]; // kosong → user tidak mengubah PIC
+    // ==== PERBAIKAN INTEGRASI ====
+    // Pastikan semua field yang divalidasi BE ikut dikirim.
+    // Nama & kapasitas dari input:
+    final String nama = _namaKandangController.text.trim();
+    final int kapasitas = int.tryParse(_kapasitasController.text) ?? 0;
 
-    // label UI untuk status
-    final String statusLabel = _statusOptions
-        .firstWhere(
-          (e) => e.$2 == _selectedStatusValue,
-          orElse: () => ('Aktif', 'active'),
-        )
-        .$1;
+    // Field lain pakai nilai lama dari object initial (supaya tidak null):
+    final int pop = widget.initial?.population ?? 0;
+    final int kematian = widget.initial?.deaths ?? 0;
 
+    final num pakan = widget.initial?.pakan ?? 0;
+    final num solar = widget.initial?.solar ?? 0;
+    final num sekam = widget.initial?.sekam ?? 0;
+    final num obat = widget.initial?.obat ?? 0;
+
+    // Payload dikembalikan ke caller → CageService.updateById()
     final payload = {
-      // Umum
-      'name': _namaKandangController.text.trim(),
-      'capacity': int.tryParse(_kapasitasController.text) ?? 0,
-
-      // === Dipakai BE ===
-      'idPenanggungJawab': idPenanggungJawab,
-      'status': _selectedStatusValue, // "active" / "inactive"
-      'Status': _selectedStatusValue, // alias
-      // === Tambahan untuk UI (opsional di BE) ===
-      'pic': _selectedPersonName,
-      'penanggung_jawab': _selectedPersonName,
-      'status_label': statusLabel,
-
-      // Default non-input (aman buat create/update)
-      'population': widget.initial?.population ?? 0,
-      'deaths': widget.initial?.deaths ?? 0,
+      'nama': nama,
+      'kapasitas': kapasitas,
+      'populasi': pop,
+      'kematian': kematian,
+      'pakan': pakan,
+      'solar': solar,
+      'sekam': sekam,
+      'obat': obat,
+      'status': _selectedStatusValue,
     };
 
     Navigator.pop(context, payload);
@@ -350,7 +345,13 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
               ),
               const SizedBox(height: 15),
 
-              // Penanggung Jawab
+              // =======================
+              // Penanggung Jawab (PJ)
+              // =======================
+              // SESUAI PERMINTAAN: kolom PJ dihilangkan dari UI,
+              // tapi kode lama tetap disimpan (di-comment) supaya
+              // kalau nanti mau diaktifkan lagi tinggal buka comment.
+              /*
               Text("Penanggung Jawab", style: textTheme.bodyMedium),
               const SizedBox(height: 6),
 
@@ -485,6 +486,7 @@ class _CustomBottomSheetsState extends State<CustomBottomSheets> {
                   const SizedBox(height: 15),
                 ],
               ],
+              */
 
               // Status Kandang
               Text("Status Kandang", style: textTheme.bodyMedium),
