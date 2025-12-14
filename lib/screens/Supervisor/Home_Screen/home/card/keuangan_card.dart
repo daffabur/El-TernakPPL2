@@ -8,8 +8,12 @@ import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/models/summar
 // agar ke Money Management tetap menampilkan navbar
 import 'package:el_ternak_ppl2/base/bottom_nav_bar.dart';
 
-// ⬇️ bottom sheet yang sama dengan di Money Management
+// bottom sheet
 import 'package:el_ternak_ppl2/screens/Supervisor/Money_Management/widgets/Custom_Bottom_Sheets.dart';
+
+// ===== ROUTE OBSERVER (GLOBAL) =====
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
 
 class CardSaldoUsaha extends StatefulWidget {
   const CardSaldoUsaha({super.key});
@@ -18,7 +22,7 @@ class CardSaldoUsaha extends StatefulWidget {
   State<CardSaldoUsaha> createState() => _CardSaldoUsahaState();
 }
 
-class _CardSaldoUsahaState extends State<CardSaldoUsaha> {
+class _CardSaldoUsahaState extends State<CardSaldoUsaha> with RouteAware {
   final _api = ApiService();
   late Future<double> _futureSaldo;
 
@@ -28,7 +32,30 @@ class _CardSaldoUsahaState extends State<CardSaldoUsaha> {
     _futureSaldo = _loadSaldo();
   }
 
-  // Ambil saldo dari /transaksi/summary; fallback ke pemasukan - pengeluaran
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  /// 🔁 Dipanggil saat balik dari halaman lain (Riwayat / Money Management)
+  @override
+  void didPopNext() {
+    setState(() {
+      _futureSaldo = _loadSaldo();
+    });
+  }
+
+  // ===== LOAD SALDO =====
   Future<double> _loadSaldo() async {
     try {
       final SummaryModel summary = await _api.getSummary();
@@ -71,7 +98,7 @@ class _CardSaldoUsahaState extends State<CardSaldoUsaha> {
     return f.format(v);
   }
 
-  // ===== buka bottom sheet Add (pakai komponen yang sama dengan MoneyManagement) =====
+  // ===== ADD TRANSAKSI =====
   Future<void> _openAddSheet() async {
     final bool? isSuccess = await showModalBottomSheet<bool>(
       context: context,
@@ -82,9 +109,11 @@ class _CardSaldoUsahaState extends State<CardSaldoUsaha> {
       ),
     );
 
-    // Kalau sukses tambah transaksi, refresh saldo header ini
+    // 🔁 AUTO REFRESH SETELAH ADD
     if (isSuccess == true && mounted) {
-      setState(() => _futureSaldo = _loadSaldo());
+      setState(() {
+        _futureSaldo = _loadSaldo();
+      });
     }
   }
 
@@ -123,7 +152,7 @@ class _CardSaldoUsahaState extends State<CardSaldoUsaha> {
           ),
           const SizedBox(height: 10),
 
-          // ===== Saldo Dinamis dari API =====
+          // ===== SALDO =====
           FutureBuilder<double>(
             future: _futureSaldo,
             builder: (context, snap) {
@@ -147,6 +176,7 @@ class _CardSaldoUsahaState extends State<CardSaldoUsaha> {
                   ],
                 );
               }
+
               if (snap.hasError) {
                 return Row(
                   children: [
@@ -169,6 +199,7 @@ class _CardSaldoUsahaState extends State<CardSaldoUsaha> {
                   ],
                 );
               }
+
               final saldo = snap.data ?? 0.0;
               return Text(
                 _rupiah(saldo),
@@ -183,7 +214,7 @@ class _CardSaldoUsahaState extends State<CardSaldoUsaha> {
 
           const SizedBox(height: 35),
 
-          // ===== Aksi =====
+          // ===== ACTION =====
           Row(
             children: [
               ElevatedButton(
@@ -206,7 +237,6 @@ class _CardSaldoUsahaState extends State<CardSaldoUsaha> {
               const SizedBox(width: 15),
               OutlinedButton(
                 onPressed: () {
-                  // arahkan ke BottomNavBar dengan tab Money (index 1)
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => const BottomNavBar(initialIndex: 1),

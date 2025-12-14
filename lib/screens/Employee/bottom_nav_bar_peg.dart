@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/material_symbols.dart';
 import 'package:iconify_flutter/icons/healthicons.dart';
-import 'package:provider/provider.dart'; // <-- 1. TAMBAHKAN IMPORT PROVIDER
+import 'package:provider/provider.dart';
+
 import 'package:el_ternak_ppl2/services/auth_service.dart';
-// Tab pages
 import 'package:el_ternak_ppl2/screens/Employee/Home_Screen/home_screen.dart';
 import 'package:el_ternak_ppl2/screens/Employee/Cage_management/cage_management_peg.dart';
+
 class BottomNavBarPeg extends StatefulWidget {
   const BottomNavBarPeg({super.key});
 
@@ -18,7 +19,6 @@ class BottomNavBarPeg extends StatefulWidget {
 class _BottomNavBarPegState extends State<BottomNavBarPeg> {
   int _selectedIndex = 0;
 
-  // Navigator keys per tab
   final _homeNavKey = GlobalKey<NavigatorState>();
   final _cageNavKey = GlobalKey<NavigatorState>();
   late final List<GlobalKey<NavigatorState>> _navKeys;
@@ -33,14 +33,15 @@ class _BottomNavBarPegState extends State<BottomNavBarPeg> {
     final currentNav = _navKeys[_selectedIndex].currentState!;
     if (currentNav.canPop()) {
       currentNav.pop();
-      return false; // cegah keluar app, pop di tab dulu
+      return false;
     }
-    // Kalau di root route tab & bukan tab Home, balik ke Home dulu
+
     if (_selectedIndex != 0) {
       setState(() => _selectedIndex = 0);
       return false;
     }
-    return true; // izinkan sistem keluar app
+
+    return true;
   }
 
   void _onItemTapped(int index) {
@@ -54,7 +55,6 @@ class _BottomNavBarPegState extends State<BottomNavBarPeg> {
     }
   }
 
-  // Navigator per tab
   Widget _buildTabNavigator({
     required GlobalKey<NavigatorState> key,
     required Widget root,
@@ -67,22 +67,22 @@ class _BottomNavBarPegState extends State<BottomNavBarPeg> {
     );
   }
 
-  // ---------- UI ----------
-  final Color _selectedIconColor = const Color(0xFF3E7B27);
-  final Color _unselectedIconColor = const Color(0xFF3E7B27);
-  final Color _selectedBg = const Color(0xFF3E7B27);
+  final Color _primaryColor = const Color(0xFF3E7B27);
 
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context, listen: false);
+
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        // IndexedStack supaya state tiap tab terjaga
         body: IndexedStack(
           index: _selectedIndex,
           children: [
-            _buildTabNavigator(key: _homeNavKey, root: HomeScreen(onLogout: () => authService.logout(),)),
+            _buildTabNavigator(
+              key: _homeNavKey,
+              root: HomeScreen(onLogout: () => authService.logout()),
+            ),
             _buildTabNavigator(
               key: _cageNavKey,
               root: const CageManagementPeg(),
@@ -90,33 +90,35 @@ class _BottomNavBarPegState extends State<BottomNavBarPeg> {
           ],
         ),
 
+        // ===== BOTTOM NAVBAR =====
         bottomNavigationBar: SafeArea(
-          minimum: const EdgeInsets.only(bottom: 8),
           child: Container(
-            height: 70,
-            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 32),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+            height: 60,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(50),
+              borderRadius: BorderRadius.circular(40),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  spreadRadius: 1,
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildNavItem(MaterialSymbols.home, "Home", 0),
                 _buildNavItem(
-                  Healthicons.animal_chicken,
-                  "Kandang",
-                  1,
-                  alignRight: true,
+                  icon: MaterialSymbols.home,
+                  label: "Beranda",
+                  index: 0,
+                ),
+                _buildNavItem(
+                  icon: Healthicons.animal_chicken,
+                  label: "Kandang",
+                  index: 1,
                 ),
               ],
             ),
@@ -126,39 +128,39 @@ class _BottomNavBarPegState extends State<BottomNavBarPeg> {
     );
   }
 
-  Widget _buildNavItem(
-    String icon,
-    String label,
-    int index, {
-    bool alignRight = false,
+  // ===== NAV ITEM (TEXT SELALU MUNCUL) =====
+  Widget _buildNavItem({
+    required String icon,
+    required String label,
+    required int index,
   }) {
     final bool isSelected = _selectedIndex == index;
 
-    return Semantics(
-      button: true,
-      selected: isSelected,
-      label: label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => _onItemTapped(index),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(12),
-          margin: EdgeInsets.only(
-            left: alignRight ? 0 : 4,
-            right: alignRight ? 4 : 0,
-          ),
-          decoration: isSelected
-              ? BoxDecoration(
-                  color: _selectedBg.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(999),
-                )
-              : const BoxDecoration(),
-          child: Iconify(
-            icon,
-            size: 28,
-            color: isSelected ? _selectedIconColor : _unselectedIconColor,
-          ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _onItemTapped(index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? _primaryColor.withOpacity(0.15)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          children: [
+            Iconify(icon, size: 26, color: _primaryColor),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _primaryColor,
+              ),
+            ),
+          ],
         ),
       ),
     );

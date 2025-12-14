@@ -16,10 +16,7 @@ import 'package:el_ternak_ppl2/screens/Supervisor/Cage_Management/widgets/Custom
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onLogout;
-  const HomeScreen({
-    super.key,
-    required this.onLogout,
-  });
+  const HomeScreen({super.key, required this.onLogout});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -110,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // Panggil kedua API secara paralel (bersamaan)
       final results = await Future.wait([
         _cageService.getForEmployee(), // API #1
-        _cageService.getLaporanForMe(),  // API #2 (Baru)
+        _cageService.getLaporanForMe(), // API #2 (Baru)
       ]);
 
       if (!mounted) return;
@@ -121,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (cages.isNotEmpty) {
         // Urutkan riwayat (DESC) agar laporan terbaru ada di [0]
         riwayat.sort(
-              (a, b) => _combineToDateTime(b).compareTo(_combineToDateTime(a)),
+          (a, b) => _combineToDateTime(b).compareTo(_combineToDateTime(a)),
         );
 
         setState(() {
@@ -150,13 +147,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _navigateToDetail() {
     if (_cage == null) return;
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => CustomDetailCagePeg(cage: _cage!),
-      ),
-    ).then((_) {
-      _loadData(); // Refresh saat kembali
-    });
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (context) => CustomDetailCagePeg(cage: _cage!),
+          ),
+        )
+        .then((_) {
+          _loadData(); // Refresh saat kembali
+        });
   }
 
   Future<void> _handleLogout(BuildContext context) async {
@@ -185,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const LoginPage()),
-          (Route<dynamic> route) => false,
+      (Route<dynamic> route) => false,
     );
   }
 
@@ -245,8 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildContent(
-      BuildContext context, Color green, String employeeName) {
+  Widget _buildContent(BuildContext context, Color green, String employeeName) {
     final cage = _cage!;
 
     // Data Ringkasan Harian
@@ -277,10 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
                   Expanded(
@@ -357,10 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: green,
                 borderRadius: BorderRadius.circular(18),
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Column(
                 children: [
                   Row(
@@ -445,8 +437,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Column(
                   children: [
-                    Icon(Icons.history_edu_rounded,
-                        size: 32, color: Colors.grey.shade400),
+                    Icon(
+                      Icons.history_edu_rounded,
+                      size: 32,
+                      color: Colors.grey.shade400,
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       "Belum ada aktivitas laporan.",
@@ -456,7 +451,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               )
             else
-            // Tampilkan (misalnya) 5 laporan terbaru saja
+              // Tampilkan (misalnya) 5 laporan terbaru saja
               Column(
                 children: _riwayatLaporan.take(5).map((report) {
                   return ActivityReportCard(
@@ -465,9 +460,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => CustomDetailReport(
-                            reportId: report.id,
-                          ),
+                          builder: (context) =>
+                              CustomDetailReport(reportId: report.id),
                         ),
                       );
                     },
@@ -604,8 +598,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _formatTanggal(DateTime d) {
     const bulan = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ];
     return '${d.day} ${bulan[d.month - 1]} ${d.year}';
   }
