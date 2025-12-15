@@ -1,0 +1,56 @@
+name: el_ternak_ppl2
+description: "A new Flutter project."
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  image_picker: ^1.1.2
+  provider: ^6.1.2
+  http_parser: ^4.0.2
+  path: ^1.8.3
+
+  flutter_localizations:
+    sdk: flutter
+
+  http: ^1.2.2
+
+  cupertino_icons: ^1.0.8
+  iconify_flutter: ^0.0.7
+  google_fonts: ^6.3.2
+  shared_preferences: ^2.5.3
+  flutter_svg: ^2.2.1
+  intl: ^0.20.2
+  fl_chart: ^1.1.1
+  bubble_chart: ^0.4.0
+  cached_network_image: ^3.4.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+  # 🔥 TAMBAHAN UNTUK APP ICON
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+
+# 🔥 KONFIGURASI APP ICON (ANDROID & IOS)
+flutter_icons:
+  android: true
+  ios: true
+  image_path: assets/images/LogoElTernak.png
+  min_sdk_android: 21

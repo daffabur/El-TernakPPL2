@@ -1,0 +1,235 @@
+import 'package:el_ternak_ppl2/base/res/styles/app_styles.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/models/storage_model.dart';
+import 'package:el_ternak_ppl2/screens/Supervisor/Storage_Management/widgets/storage_detail.dart';
+import 'package:el_ternak_ppl2/services/storage_service.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/date_symbol_data_local.dart';
+
+class StorageManagement extends StatefulWidget {
+  const StorageManagement({super.key});
+
+  @override
+  State<StorageManagement> createState() => _StorageManagementState();
+}
+
+class _StorageManagementState extends State<StorageManagement> {
+  final StorageService _storageService = StorageService();
+  late Future<Storage> _storageFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    initializeDateFormatting('id_ID', null);
+    _loadStorageData();
+  }
+
+  void _loadStorageData() {
+    setState(() {
+      _storageFuture = _storageService.getStorageData();
+    });
+  }
+
+  void _navigateToDetail(String categoryName, IconData categoryIcon) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StorageDetailScreen(
+          categoryName: categoryName,
+          categoryIcon: categoryIcon,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // === Header ===
+              Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppStyles.primaryColor, width: 1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  "Informasi Penyimpanan",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              Expanded(
+                child: FutureBuilder<Storage>(
+                  future: _storageFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                          child: Text("Gagal memuat: ${snapshot.error}"));
+                    }
+                    if (!snapshot.hasData) {
+                      return const Center(
+                          child: Text("Data penyimpanan tidak ditemukan."));
+                    }
+
+                    final storage = snapshot.data!;
+
+                    final List<Map<String, dynamic>> dynamicStorageItems = [
+                      {
+                        "name": "Pakan",
+                        "used": storage.pakanUsed,
+                        "total": storage.pakanStock,
+                        "icon": Icons.grass,
+                        "unit": "Kg"
+                      },
+                      {
+                        "name": "Solar",
+                        "used": storage.solarUsed,
+                        "total": storage.solarStock,
+                        "icon": Icons.local_gas_station,
+                        "unit": "L"
+                      },
+                      {
+                        "name": "Sekam",
+                        "used": storage.sekamUsed,
+                        "total": storage.sekamStock,
+                        "icon": Icons.layers,
+                        "unit": "Kg"
+                      },
+                      {
+                        "name": "Obat",
+                        "used": storage.obatUsed,
+                        "total": storage.obatStock,
+                        "icon": Icons.medical_services,
+                        "unit": "L"
+                      }
+                    ];
+
+                    return RefreshIndicator(
+                      onRefresh: () async => _loadStorageData(),
+                      child: ListView.builder(
+                        itemCount: dynamicStorageItems.length,
+                        itemBuilder: (context, index) {
+                          final item = dynamicStorageItems[index];
+                          final double progress = (item['total'] > 0)
+                              ? (item['used'] / item['total'].toDouble())
+                              : 0.0;
+
+                          Widget cardContent = Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                margin:
+                                const EdgeInsets.only(top: 20, bottom: 20),
+                                padding: const EdgeInsets.only(
+                                    top: 36, bottom: 48, left: 36, right: 36),
+                                decoration: BoxDecoration(
+                                  color: AppStyles.highlightColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black12,
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item['name'],
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 30,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      "${item['used']} ${item['unit']} / ${item['total']} ${item['unit']}",
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: LinearProgressIndicator(
+                                        value: progress,
+                                        minHeight: 13,
+                                        backgroundColor: Colors.white,
+                                        valueColor:
+                                        AlwaysStoppedAnimation<Color>(
+                                            AppStyles.IconCageCardColor),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Positioned(
+                                top: 0,
+                                left: 20,
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                            color:
+                                            Colors.black.withOpacity(0.2),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4))
+                                      ]),
+                                  child: Icon(
+                                    item['icon'],
+                                    color: const Color(0xFF2E7D32),
+                                    size: 32,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+
+                          if (item['name'] == "Pakan" ||
+                              item['name'] == "Obat") {
+                            return InkWell(
+                              onTap: () => _navigateToDetail(
+                                item['name'],
+                                item['icon'],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              child: cardContent,
+                            );
+                          }
+
+                          return cardContent;
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
